@@ -31,11 +31,13 @@ contract VariableDebtToken is ERC20, AccessControl {
     
     constructor(
         address _lendingPool,
+        address _borrowLogic,
         string memory _name,
         string memory _symbol
     ) ERC20(_name, _symbol) {
         lendingPool = _lendingPool;
         _grantRole(LENDER_ROLE, _lendingPool);
+        _grantRole(LENDER_ROLE,_borrowLogic);
     }
     
     /**
@@ -44,25 +46,45 @@ contract VariableDebtToken is ERC20, AccessControl {
      * Converts actual amount to scaled amount for storage.
      * As borrowIndex grows, user's debt grows automatically.
      * 
+     * @param user The address performing the borrow (receives borrowed asset)
+     * @param onBehalfOf The address that will get the debt
+     * @param amount The amount being borrowed
+     * @param index The current variable borrow index
+     * @return True if this is the user's first borrow
+     * 
      * Example:
      * - borrowIndex = 1e27 (1.0), amount = 100
      * - scaledAmount = (100 * 1e27) / 1e27 = 100
      * - Later, borrowIndex = 1.05e27 (5% interest accrued)
      * - User's balance = (100 * 1.05e27) / 1e27 = 105 (owes more!)
      */
-    function mint(address user, uint256 amount) external onlyRole(LENDER_ROLE) {
+    function mint(
+        address user,
+        address onBehalfOf,
+        uint256 amount,
+        uint256 index
+    ) external onlyRole(LENDER_ROLE) returns (bool) {
         require(amount > 0, "Amount must be > 0");
+        
+        // Update borrow index if provided
+        if (index != borrowIndex) {
+            borrowIndex = index;
+        }
+        
+        // Check if this is first borrow for onBehalfOf
+        bool isFirstBorrow = scaledBalances[onBehalfOf] == 0;
         
         // Convert actual amount to scaled amount
         uint256 scaledAmount = (amount * 1e27) / borrowIndex;
         
-        // Update our internal tracking
-        scaledBalances[user] += scaledAmount;
+        // Update our internal tracking for onBehalfOf (debt goes to them)
+        scaledBalances[onBehalfOf] += scaledAmount;
         scaledTotalSupply += scaledAmount;
         
-        // Emit Transfer event (NOT calling _mint!)
-        // Emit ACTUAL amount so debt is visible correctly
-        emit Transfer(address(0), user, amount);
+        // Emit Transfer event - debt is assigned to onBehalfOf
+        emit Transfer(address(0), onBehalfOf, amount);
+        
+        return isFirstBorrow;
     }
     
     /**
@@ -70,23 +92,39 @@ contract VariableDebtToken is ERC20, AccessControl {
      * 
      * Converts actual repay amount to scaled amount.
      * User repays actual debt (e.g., 105 USDC) but we track scaled internally.
+     * 
+     * @param from The address whose debt is being repaid
+     * @param amount The amount being repaid
+     * @param index The current variable borrow index
+     * @return The new total supply after burn
      */
-    function burn(address user, uint256 amount) external onlyRole(LENDER_ROLE) {
+    function burn(
+        address from,
+        uint256 amount,
+        uint256 index
+    ) external onlyRole(LENDER_ROLE) returns (uint256) {
         require(amount > 0, "Amount must be > 0");
+        
+        // Update borrow index if provided
+        if (index != borrowIndex) {
+            borrowIndex = index;
+        }
         
         // Convert actual amount to scaled amount
         uint256 scaledAmount = (amount * 1e27) / borrowIndex;
         
         // Validate user has enough debt
-        require(scaledBalances[user] >= scaledAmount, "Insufficient debt balance");
+        require(scaledBalances[from] >= scaledAmount, "Insufficient debt balance");
         
         // Update our internal tracking
-        scaledBalances[user] -= scaledAmount;
+        scaledBalances[from] -= scaledAmount;
         scaledTotalSupply -= scaledAmount;
         
         // Emit Transfer event (NOT calling _burn!)
         // Emit ACTUAL amount repaid
-        emit Transfer(user, address(0), amount);
+        emit Transfer(from, address(0), amount);
+        
+        return totalSupply();
     }
     
     /**
@@ -140,5 +178,18 @@ contract VariableDebtToken is ERC20, AccessControl {
      */
     function transferFrom(address, address, uint256) public pure override returns (bool) {
         revert VariableDebtToken_TransferNotAllowed();
+    }    
+    /**
+     * Reject ETH sent to this contract
+     * Debt tokens should not hold ETH
+     */
+    receive() external payable {
+        revert("VariableDebtToken: cannot receive ETH");
     }
-}
+    
+    /**
+     * Reject any other calls
+     */
+    fallback() external payable {
+        revert("VariableDebtToken: fallback not allowed");
+    }}

@@ -112,6 +112,12 @@ library DataTypes {
         uint256 amount;
         uint256 interestRateMode;
         uint16 referralCode;
+        uint256 borrowCap;              // Max total borrows for this reserve
+        uint256 totalStableDebt;        // Current stable debt
+        uint256 totalVariableDebt;      // Current variable debt
+        uint256 delegatedAllowance;     // Credit delegation allowance (if onBehalfOf != user)
+        uint256 availableBorrows;       // User's available borrow capacity in base currency
+        uint256 amountInBase;           // Borrow amount converted to base currency
     }
     
     /**

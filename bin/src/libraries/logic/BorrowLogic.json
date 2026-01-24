@@ -1,0 +1,2019 @@
+{
+    "contractName": "BorrowLogic",
+    "abi": [],
+    "metadata": "{\"compiler\":{\"version\":\"0.8.33+commit.64118f21\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"BorrowLogic\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"Handles ALL borrow-related operations - Validation - Execution - Debt token minting  TODO: Implement borrow validation and execution\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/logic/BorrowLogic.sol\":\"BorrowLogic\"},\"evmVersion\":\"osaka\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[],\"viaIR\":true},\"sources\":{\"/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/helpers/Errors.sol\":{\"keccak256\":\"0xe41656b6e943438c8865be8fd4691f1c4bcfaa0e78d17622be1fc68df2c3ef58\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://83e0e81d2c2df9a952074bcbfc1e228deea7097f2cea62554cdc5ae20f766797\",\"dweb:/ipfs/QmUFK6RNUqvkzBxwdXX178NQGH4CnuC2agVKX32sTY3pNE\"]},\"/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/logic/BorrowLogic.sol\":{\"keccak256\":\"0xc9ac9d3a3f0c864ca2897274b4fd80175a36dcf71a693ef1d08916612dee4e84\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://56b55d70a936bc24bec76827bead13b17f012f8891c5cbcc8a377e596daa21eb\",\"dweb:/ipfs/QmaqUbzygMrBeRjYQJZVyRDSdC3MrvsiZtUCcw1LNmHWjT\"]},\"/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/types/DataTypes.sol\":{\"keccak256\":\"0xdf8ffe42093c4ac836055c1d4fcfd973255b8406ee06c5342ec06309fa7870e8\",\"license\":\"BUSL-1.1\",\"urls\":[\"bzz-raw://c8068a60eadc4bc1b331a2c54e09a3a3f6234c4f5136d17f5b8aa26f9e57eade\",\"dweb:/ipfs/QmV8ysiE8Mszmq23iyNTuwzDHZfKht5Jj6WaEv6tvL4V4o\"]}},\"version\":1}",
+    "bytecode": "6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212207efff1e8d286a43c3038d5b640143d838c6cf12296f709cc0b60fc5207357bf364736f6c63430008210033",
+    "deployedBytecode": "5f80fdfea26469706673582212207efff1e8d286a43c3038d5b640143d838c6cf12296f709cc0b60fc5207357bf364736f6c63430008210033",
+    "sourceMap": "350:5318:1:-:0;;;;;;;;;;;;;;;;;;;;;",
+    "deployedSourceMap": "350:5318:1:-:0;;",
+    "sourcePath": "/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/logic/BorrowLogic.sol",
+    "compiler": {
+        "name": "solc",
+        "version": "0.8.33+commit.64118f21"
+    },
+    "ast": {
+        "absolutePath": "/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/logic/BorrowLogic.sol",
+        "exportedSymbols": {
+            "BorrowLogic": [
+                346
+            ],
+            "DataTypes": [
+                515
+            ],
+            "Errors": [
+                207
+            ]
+        },
+        "id": 347,
+        "license": "BUSL-1.1",
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 209,
+                "literals": [
+                    "solidity",
+                    "^",
+                    "0.8",
+                    ".20"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "37:24:1"
+            },
+            {
+                "absolutePath": "/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/types/DataTypes.sol",
+                "file": "../types/DataTypes.sol",
+                "id": 211,
+                "nameLocation": "-1:-1:-1",
+                "nodeType": "ImportDirective",
+                "scope": 347,
+                "sourceUnit": 516,
+                "src": "63:49:1",
+                "symbolAliases": [
+                    {
+                        "foreign": {
+                            "id": 210,
+                            "name": "DataTypes",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 515,
+                            "src": "71:9:1",
+                            "typeDescriptions": {}
+                        },
+                        "nameLocation": "-1:-1:-1"
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "absolutePath": "/Users/ashutoshkumar/Desktop/LendingProtocol/src/libraries/helpers/Errors.sol",
+                "file": "../helpers/Errors.sol",
+                "id": 213,
+                "nameLocation": "-1:-1:-1",
+                "nodeType": "ImportDirective",
+                "scope": 347,
+                "sourceUnit": 208,
+                "src": "113:45:1",
+                "symbolAliases": [
+                    {
+                        "foreign": {
+                            "id": 212,
+                            "name": "Errors",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 207,
+                            "src": "121:6:1",
+                            "typeDescriptions": {}
+                        },
+                        "nameLocation": "-1:-1:-1"
+                    }
+                ],
+                "unitAlias": ""
+            },
+            {
+                "abstract": false,
+                "baseContracts": [],
+                "canonicalName": "BorrowLogic",
+                "contractDependencies": [],
+                "contractKind": "library",
+                "documentation": {
+                    "id": 214,
+                    "nodeType": "StructuredDocumentation",
+                    "src": "161:188:1",
+                    "text": " @title BorrowLogic\n @notice Handles ALL borrow-related operations\n - Validation\n - Execution\n - Debt token minting\n \n TODO: Implement borrow validation and execution"
+                },
+                "fullyImplemented": true,
+                "id": 346,
+                "linearizedBaseContracts": [
+                    346
+                ],
+                "name": "BorrowLogic",
+                "nameLocation": "358:11:1",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "body": {
+                            "id": 344,
+                            "nodeType": "Block",
+                            "src": "2173:1603:1",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "commonType": {
+                                                    "typeIdentifier": "t_uint256",
+                                                    "typeString": "uint256"
+                                                },
+                                                "id": 228,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "leftExpression": {
+                                                    "expression": {
+                                                        "id": 225,
+                                                        "name": "params",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [],
+                                                        "referencedDeclaration": 221,
+                                                        "src": "2223:6:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                            "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                        }
+                                                    },
+                                                    "id": 226,
+                                                    "isConstant": false,
+                                                    "isLValue": true,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "memberLocation": "2230:6:1",
+                                                    "memberName": "amount",
+                                                    "nodeType": "MemberAccess",
+                                                    "referencedDeclaration": 450,
+                                                    "src": "2223:13:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "nodeType": "BinaryOperation",
+                                                "operator": ">",
+                                                "rightExpression": {
+                                                    "hexValue": "30",
+                                                    "id": 227,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": true,
+                                                    "kind": "number",
+                                                    "lValueRequested": false,
+                                                    "nodeType": "Literal",
+                                                    "src": "2239:1:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_rational_0_by_1",
+                                                        "typeString": "int_const 0"
+                                                    },
+                                                    "value": "0"
+                                                },
+                                                "src": "2223:17:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "expression": {
+                                                    "id": 229,
+                                                    "name": "Errors",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 207,
+                                                    "src": "2242:6:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                        "typeString": "type(library Errors)"
+                                                    }
+                                                },
+                                                "id": 230,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "lValueRequested": false,
+                                                "memberLocation": "2249:14:1",
+                                                "memberName": "INVALID_AMOUNT",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 35,
+                                                "src": "2242:21:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            ],
+                                            "id": 224,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "2215:7:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 231,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "nameLocations": [],
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2215:49:1",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 232,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2215:49:1"
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "expression": {
+                                                    "id": 234,
+                                                    "name": "reserve",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 218,
+                                                    "src": "2327:7:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_struct$_ReserveData_$385_storage_ptr",
+                                                        "typeString": "struct DataTypes.ReserveData storage pointer"
+                                                    }
+                                                },
+                                                "id": 235,
+                                                "isConstant": false,
+                                                "isLValue": true,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "memberLocation": "2335:8:1",
+                                                "memberName": "isActive",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 376,
+                                                "src": "2327:16:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "expression": {
+                                                    "id": 236,
+                                                    "name": "Errors",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 207,
+                                                    "src": "2345:6:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                        "typeString": "type(library Errors)"
+                                                    }
+                                                },
+                                                "id": 237,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "lValueRequested": false,
+                                                "memberLocation": "2352:16:1",
+                                                "memberName": "RESERVE_INACTIVE",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 38,
+                                                "src": "2345:23:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            ],
+                                            "id": 233,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "2319:7:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 238,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "nameLocations": [],
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2319:50:1",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 239,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2319:50:1"
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "id": 243,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "nodeType": "UnaryOperation",
+                                                "operator": "!",
+                                                "prefix": true,
+                                                "src": "2387:17:1",
+                                                "subExpression": {
+                                                    "expression": {
+                                                        "id": 241,
+                                                        "name": "reserve",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [],
+                                                        "referencedDeclaration": 218,
+                                                        "src": "2388:7:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_struct$_ReserveData_$385_storage_ptr",
+                                                            "typeString": "struct DataTypes.ReserveData storage pointer"
+                                                        }
+                                                    },
+                                                    "id": 242,
+                                                    "isConstant": false,
+                                                    "isLValue": true,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "memberLocation": "2396:8:1",
+                                                    "memberName": "isPaused",
+                                                    "nodeType": "MemberAccess",
+                                                    "referencedDeclaration": 384,
+                                                    "src": "2388:16:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_bool",
+                                                        "typeString": "bool"
+                                                    }
+                                                },
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "expression": {
+                                                    "id": 244,
+                                                    "name": "Errors",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 207,
+                                                    "src": "2406:6:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                        "typeString": "type(library Errors)"
+                                                    }
+                                                },
+                                                "id": 245,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "lValueRequested": false,
+                                                "memberLocation": "2413:14:1",
+                                                "memberName": "RESERVE_PAUSED",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 44,
+                                                "src": "2406:21:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            ],
+                                            "id": 240,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "2379:7:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 246,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "nameLocations": [],
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2379:49:1",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 247,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2379:49:1"
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "expression": {
+                                                    "id": 249,
+                                                    "name": "reserve",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 218,
+                                                    "src": "2446:7:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_struct$_ReserveData_$385_storage_ptr",
+                                                        "typeString": "struct DataTypes.ReserveData storage pointer"
+                                                    }
+                                                },
+                                                "id": 250,
+                                                "isConstant": false,
+                                                "isLValue": true,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "memberLocation": "2454:16:1",
+                                                "memberName": "borrowingEnabled",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 380,
+                                                "src": "2446:24:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "expression": {
+                                                    "id": 251,
+                                                    "name": "Errors",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 207,
+                                                    "src": "2472:6:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                        "typeString": "type(library Errors)"
+                                                    }
+                                                },
+                                                "id": 252,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "lValueRequested": false,
+                                                "memberLocation": "2479:21:1",
+                                                "memberName": "BORROWING_NOT_ENABLED",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 47,
+                                                "src": "2472:28:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            ],
+                                            "id": 248,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "2438:7:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 253,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "nameLocations": [],
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2438:63:1",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 254,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2438:63:1"
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "commonType": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                "id": 264,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "leftExpression": {
+                                                    "commonType": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    },
+                                                    "id": 259,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "leftExpression": {
+                                                        "expression": {
+                                                            "id": 256,
+                                                            "name": "params",
+                                                            "nodeType": "Identifier",
+                                                            "overloadedDeclarations": [],
+                                                            "referencedDeclaration": 221,
+                                                            "src": "2585:6:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                            }
+                                                        },
+                                                        "id": 257,
+                                                        "isConstant": false,
+                                                        "isLValue": true,
+                                                        "isPure": false,
+                                                        "lValueRequested": false,
+                                                        "memberLocation": "2592:16:1",
+                                                        "memberName": "interestRateMode",
+                                                        "nodeType": "MemberAccess",
+                                                        "referencedDeclaration": 452,
+                                                        "src": "2585:23:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_uint256",
+                                                            "typeString": "uint256"
+                                                        }
+                                                    },
+                                                    "nodeType": "BinaryOperation",
+                                                    "operator": "==",
+                                                    "rightExpression": {
+                                                        "hexValue": "31",
+                                                        "id": 258,
+                                                        "isConstant": false,
+                                                        "isLValue": false,
+                                                        "isPure": true,
+                                                        "kind": "number",
+                                                        "lValueRequested": false,
+                                                        "nodeType": "Literal",
+                                                        "src": "2612:1:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_rational_1_by_1",
+                                                            "typeString": "int_const 1"
+                                                        },
+                                                        "value": "1"
+                                                    },
+                                                    "src": "2585:28:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_bool",
+                                                        "typeString": "bool"
+                                                    }
+                                                },
+                                                "nodeType": "BinaryOperation",
+                                                "operator": "||",
+                                                "rightExpression": {
+                                                    "commonType": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    },
+                                                    "id": 263,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "leftExpression": {
+                                                        "expression": {
+                                                            "id": 260,
+                                                            "name": "params",
+                                                            "nodeType": "Identifier",
+                                                            "overloadedDeclarations": [],
+                                                            "referencedDeclaration": 221,
+                                                            "src": "2617:6:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                            }
+                                                        },
+                                                        "id": 261,
+                                                        "isConstant": false,
+                                                        "isLValue": true,
+                                                        "isPure": false,
+                                                        "lValueRequested": false,
+                                                        "memberLocation": "2624:16:1",
+                                                        "memberName": "interestRateMode",
+                                                        "nodeType": "MemberAccess",
+                                                        "referencedDeclaration": 452,
+                                                        "src": "2617:23:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_uint256",
+                                                            "typeString": "uint256"
+                                                        }
+                                                    },
+                                                    "nodeType": "BinaryOperation",
+                                                    "operator": "==",
+                                                    "rightExpression": {
+                                                        "hexValue": "32",
+                                                        "id": 262,
+                                                        "isConstant": false,
+                                                        "isLValue": false,
+                                                        "isPure": true,
+                                                        "kind": "number",
+                                                        "lValueRequested": false,
+                                                        "nodeType": "Literal",
+                                                        "src": "2644:1:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_rational_2_by_1",
+                                                            "typeString": "int_const 2"
+                                                        },
+                                                        "value": "2"
+                                                    },
+                                                    "src": "2617:28:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_bool",
+                                                        "typeString": "bool"
+                                                    }
+                                                },
+                                                "src": "2585:60:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "expression": {
+                                                    "id": 265,
+                                                    "name": "Errors",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 207,
+                                                    "src": "2659:6:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                        "typeString": "type(library Errors)"
+                                                    }
+                                                },
+                                                "id": 266,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "lValueRequested": false,
+                                                "memberLocation": "2666:35:1",
+                                                "memberName": "INVALID_INTEREST_RATE_MODE_SELECTED",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 56,
+                                                "src": "2659:42:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            ],
+                                            "id": 255,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "2564:7:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 267,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "nameLocations": [],
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2564:147:1",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 268,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2564:147:1"
+                                },
+                                {
+                                    "condition": {
+                                        "commonType": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        },
+                                        "id": 272,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftExpression": {
+                                            "expression": {
+                                                "id": 269,
+                                                "name": "params",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 221,
+                                                "src": "2725:6:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                    "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                }
+                                            },
+                                            "id": 270,
+                                            "isConstant": false,
+                                            "isLValue": true,
+                                            "isPure": false,
+                                            "lValueRequested": false,
+                                            "memberLocation": "2732:16:1",
+                                            "memberName": "interestRateMode",
+                                            "nodeType": "MemberAccess",
+                                            "referencedDeclaration": 452,
+                                            "src": "2725:23:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "nodeType": "BinaryOperation",
+                                        "operator": "==",
+                                        "rightExpression": {
+                                            "hexValue": "31",
+                                            "id": 271,
+                                            "isConstant": false,
+                                            "isLValue": false,
+                                            "isPure": true,
+                                            "kind": "number",
+                                            "lValueRequested": false,
+                                            "nodeType": "Literal",
+                                            "src": "2752:1:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_rational_1_by_1",
+                                                "typeString": "int_const 1"
+                                            },
+                                            "value": "1"
+                                        },
+                                        "src": "2725:28:1",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_bool",
+                                            "typeString": "bool"
+                                        }
+                                    },
+                                    "id": 281,
+                                    "nodeType": "IfStatement",
+                                    "src": "2721:136:1",
+                                    "trueBody": {
+                                        "id": 280,
+                                        "nodeType": "Block",
+                                        "src": "2755:102:1",
+                                        "statements": [
+                                            {
+                                                "expression": {
+                                                    "arguments": [
+                                                        {
+                                                            "expression": {
+                                                                "id": 274,
+                                                                "name": "reserve",
+                                                                "nodeType": "Identifier",
+                                                                "overloadedDeclarations": [],
+                                                                "referencedDeclaration": 218,
+                                                                "src": "2777:7:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_struct$_ReserveData_$385_storage_ptr",
+                                                                    "typeString": "struct DataTypes.ReserveData storage pointer"
+                                                                }
+                                                            },
+                                                            "id": 275,
+                                                            "isConstant": false,
+                                                            "isLValue": true,
+                                                            "isPure": false,
+                                                            "lValueRequested": false,
+                                                            "memberLocation": "2785:23:1",
+                                                            "memberName": "stableBorrowRateEnabled",
+                                                            "nodeType": "MemberAccess",
+                                                            "referencedDeclaration": 382,
+                                                            "src": "2777:31:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_bool",
+                                                                "typeString": "bool"
+                                                            }
+                                                        },
+                                                        {
+                                                            "expression": {
+                                                                "id": 276,
+                                                                "name": "Errors",
+                                                                "nodeType": "Identifier",
+                                                                "overloadedDeclarations": [],
+                                                                "referencedDeclaration": 207,
+                                                                "src": "2810:6:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                                    "typeString": "type(library Errors)"
+                                                                }
+                                                            },
+                                                            "id": 277,
+                                                            "isConstant": false,
+                                                            "isLValue": false,
+                                                            "isPure": true,
+                                                            "lValueRequested": false,
+                                                            "memberLocation": "2817:28:1",
+                                                            "memberName": "STABLE_BORROWING_NOT_ENABLED",
+                                                            "nodeType": "MemberAccess",
+                                                            "referencedDeclaration": 50,
+                                                            "src": "2810:35:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_string_memory_ptr",
+                                                                "typeString": "string memory"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "expression": {
+                                                        "argumentTypes": [
+                                                            {
+                                                                "typeIdentifier": "t_bool",
+                                                                "typeString": "bool"
+                                                            },
+                                                            {
+                                                                "typeIdentifier": "t_string_memory_ptr",
+                                                                "typeString": "string memory"
+                                                            }
+                                                        ],
+                                                        "id": 273,
+                                                        "name": "require",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [
+                                                            4294967278,
+                                                            4294967278,
+                                                            4294967278
+                                                        ],
+                                                        "referencedDeclaration": 4294967278,
+                                                        "src": "2769:7:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                            "typeString": "function (bool,string memory) pure"
+                                                        }
+                                                    },
+                                                    "id": 278,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": false,
+                                                    "kind": "functionCall",
+                                                    "lValueRequested": false,
+                                                    "nameLocations": [],
+                                                    "names": [],
+                                                    "nodeType": "FunctionCall",
+                                                    "src": "2769:77:1",
+                                                    "tryCall": false,
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_tuple$__$",
+                                                        "typeString": "tuple()"
+                                                    }
+                                                },
+                                                "id": 279,
+                                                "nodeType": "ExpressionStatement",
+                                                "src": "2769:77:1"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "commonType": {
+                                                    "typeIdentifier": "t_uint256",
+                                                    "typeString": "uint256"
+                                                },
+                                                "id": 287,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "leftExpression": {
+                                                    "expression": {
+                                                        "id": 283,
+                                                        "name": "reserve",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [],
+                                                        "referencedDeclaration": 218,
+                                                        "src": "2913:7:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_struct$_ReserveData_$385_storage_ptr",
+                                                            "typeString": "struct DataTypes.ReserveData storage pointer"
+                                                        }
+                                                    },
+                                                    "id": 284,
+                                                    "isConstant": false,
+                                                    "isLValue": true,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "memberLocation": "2921:18:1",
+                                                    "memberName": "availableLiquidity",
+                                                    "nodeType": "MemberAccess",
+                                                    "referencedDeclaration": 360,
+                                                    "src": "2913:26:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "nodeType": "BinaryOperation",
+                                                "operator": ">=",
+                                                "rightExpression": {
+                                                    "expression": {
+                                                        "id": 285,
+                                                        "name": "params",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [],
+                                                        "referencedDeclaration": 221,
+                                                        "src": "2943:6:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                            "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                        }
+                                                    },
+                                                    "id": 286,
+                                                    "isConstant": false,
+                                                    "isLValue": true,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "memberLocation": "2950:6:1",
+                                                    "memberName": "amount",
+                                                    "nodeType": "MemberAccess",
+                                                    "referencedDeclaration": 450,
+                                                    "src": "2943:13:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "src": "2913:43:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "hexValue": "496e73756666696369656e74206c6971756964697479",
+                                                "id": 288,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "kind": "string",
+                                                "lValueRequested": false,
+                                                "nodeType": "Literal",
+                                                "src": "2958:24:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_stringliteral_36435f17e62e176b853e8c37716e51b74bf692c7f7df8628db24bf070e8367ad",
+                                                    "typeString": "literal_string \"Insufficient liquidity\""
+                                                },
+                                                "value": "Insufficient liquidity"
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_stringliteral_36435f17e62e176b853e8c37716e51b74bf692c7f7df8628db24bf070e8367ad",
+                                                    "typeString": "literal_string \"Insufficient liquidity\""
+                                                }
+                                            ],
+                                            "id": 282,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "2905:7:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 289,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "nameLocations": [],
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2905:78:1",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 290,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2905:78:1"
+                                },
+                                {
+                                    "condition": {
+                                        "commonType": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        },
+                                        "id": 294,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftExpression": {
+                                            "expression": {
+                                                "id": 291,
+                                                "name": "params",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 221,
+                                                "src": "3046:6:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                    "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                }
+                                            },
+                                            "id": 292,
+                                            "isConstant": false,
+                                            "isLValue": true,
+                                            "isPure": false,
+                                            "lValueRequested": false,
+                                            "memberLocation": "3053:9:1",
+                                            "memberName": "borrowCap",
+                                            "nodeType": "MemberAccess",
+                                            "referencedDeclaration": 456,
+                                            "src": "3046:16:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "nodeType": "BinaryOperation",
+                                        "operator": ">",
+                                        "rightExpression": {
+                                            "hexValue": "30",
+                                            "id": 293,
+                                            "isConstant": false,
+                                            "isLValue": false,
+                                            "isPure": true,
+                                            "kind": "number",
+                                            "lValueRequested": false,
+                                            "nodeType": "Literal",
+                                            "src": "3065:1:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_rational_0_by_1",
+                                                "typeString": "int_const 0"
+                                            },
+                                            "value": "0"
+                                        },
+                                        "src": "3046:20:1",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_bool",
+                                            "typeString": "bool"
+                                        }
+                                    },
+                                    "id": 316,
+                                    "nodeType": "IfStatement",
+                                    "src": "3042:216:1",
+                                    "trueBody": {
+                                        "id": 315,
+                                        "nodeType": "Block",
+                                        "src": "3068:190:1",
+                                        "statements": [
+                                            {
+                                                "assignments": [
+                                                    296
+                                                ],
+                                                "declarations": [
+                                                    {
+                                                        "constant": false,
+                                                        "id": 296,
+                                                        "mutability": "mutable",
+                                                        "name": "totalDebt",
+                                                        "nameLocation": "3090:9:1",
+                                                        "nodeType": "VariableDeclaration",
+                                                        "scope": 315,
+                                                        "src": "3082:17:1",
+                                                        "stateVariable": false,
+                                                        "storageLocation": "default",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_uint256",
+                                                            "typeString": "uint256"
+                                                        },
+                                                        "typeName": {
+                                                            "id": 295,
+                                                            "name": "uint256",
+                                                            "nodeType": "ElementaryTypeName",
+                                                            "src": "3082:7:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_uint256",
+                                                                "typeString": "uint256"
+                                                            }
+                                                        },
+                                                        "visibility": "internal"
+                                                    }
+                                                ],
+                                                "id": 302,
+                                                "initialValue": {
+                                                    "commonType": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    },
+                                                    "id": 301,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "leftExpression": {
+                                                        "expression": {
+                                                            "id": 297,
+                                                            "name": "params",
+                                                            "nodeType": "Identifier",
+                                                            "overloadedDeclarations": [],
+                                                            "referencedDeclaration": 221,
+                                                            "src": "3102:6:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                            }
+                                                        },
+                                                        "id": 298,
+                                                        "isConstant": false,
+                                                        "isLValue": true,
+                                                        "isPure": false,
+                                                        "lValueRequested": false,
+                                                        "memberLocation": "3109:15:1",
+                                                        "memberName": "totalStableDebt",
+                                                        "nodeType": "MemberAccess",
+                                                        "referencedDeclaration": 458,
+                                                        "src": "3102:22:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_uint256",
+                                                            "typeString": "uint256"
+                                                        }
+                                                    },
+                                                    "nodeType": "BinaryOperation",
+                                                    "operator": "+",
+                                                    "rightExpression": {
+                                                        "expression": {
+                                                            "id": 299,
+                                                            "name": "params",
+                                                            "nodeType": "Identifier",
+                                                            "overloadedDeclarations": [],
+                                                            "referencedDeclaration": 221,
+                                                            "src": "3127:6:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                            }
+                                                        },
+                                                        "id": 300,
+                                                        "isConstant": false,
+                                                        "isLValue": true,
+                                                        "isPure": false,
+                                                        "lValueRequested": false,
+                                                        "memberLocation": "3134:17:1",
+                                                        "memberName": "totalVariableDebt",
+                                                        "nodeType": "MemberAccess",
+                                                        "referencedDeclaration": 460,
+                                                        "src": "3127:24:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_uint256",
+                                                            "typeString": "uint256"
+                                                        }
+                                                    },
+                                                    "src": "3102:49:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "nodeType": "VariableDeclarationStatement",
+                                                "src": "3082:69:1"
+                                            },
+                                            {
+                                                "expression": {
+                                                    "arguments": [
+                                                        {
+                                                            "commonType": {
+                                                                "typeIdentifier": "t_uint256",
+                                                                "typeString": "uint256"
+                                                            },
+                                                            "id": 310,
+                                                            "isConstant": false,
+                                                            "isLValue": false,
+                                                            "isPure": false,
+                                                            "lValueRequested": false,
+                                                            "leftExpression": {
+                                                                "commonType": {
+                                                                    "typeIdentifier": "t_uint256",
+                                                                    "typeString": "uint256"
+                                                                },
+                                                                "id": 307,
+                                                                "isConstant": false,
+                                                                "isLValue": false,
+                                                                "isPure": false,
+                                                                "lValueRequested": false,
+                                                                "leftExpression": {
+                                                                    "id": 304,
+                                                                    "name": "totalDebt",
+                                                                    "nodeType": "Identifier",
+                                                                    "overloadedDeclarations": [],
+                                                                    "referencedDeclaration": 296,
+                                                                    "src": "3173:9:1",
+                                                                    "typeDescriptions": {
+                                                                        "typeIdentifier": "t_uint256",
+                                                                        "typeString": "uint256"
+                                                                    }
+                                                                },
+                                                                "nodeType": "BinaryOperation",
+                                                                "operator": "+",
+                                                                "rightExpression": {
+                                                                    "expression": {
+                                                                        "id": 305,
+                                                                        "name": "params",
+                                                                        "nodeType": "Identifier",
+                                                                        "overloadedDeclarations": [],
+                                                                        "referencedDeclaration": 221,
+                                                                        "src": "3185:6:1",
+                                                                        "typeDescriptions": {
+                                                                            "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                            "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                                        }
+                                                                    },
+                                                                    "id": 306,
+                                                                    "isConstant": false,
+                                                                    "isLValue": true,
+                                                                    "isPure": false,
+                                                                    "lValueRequested": false,
+                                                                    "memberLocation": "3192:6:1",
+                                                                    "memberName": "amount",
+                                                                    "nodeType": "MemberAccess",
+                                                                    "referencedDeclaration": 450,
+                                                                    "src": "3185:13:1",
+                                                                    "typeDescriptions": {
+                                                                        "typeIdentifier": "t_uint256",
+                                                                        "typeString": "uint256"
+                                                                    }
+                                                                },
+                                                                "src": "3173:25:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_uint256",
+                                                                    "typeString": "uint256"
+                                                                }
+                                                            },
+                                                            "nodeType": "BinaryOperation",
+                                                            "operator": "<=",
+                                                            "rightExpression": {
+                                                                "expression": {
+                                                                    "id": 308,
+                                                                    "name": "params",
+                                                                    "nodeType": "Identifier",
+                                                                    "overloadedDeclarations": [],
+                                                                    "referencedDeclaration": 221,
+                                                                    "src": "3202:6:1",
+                                                                    "typeDescriptions": {
+                                                                        "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                        "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                                    }
+                                                                },
+                                                                "id": 309,
+                                                                "isConstant": false,
+                                                                "isLValue": true,
+                                                                "isPure": false,
+                                                                "lValueRequested": false,
+                                                                "memberLocation": "3209:9:1",
+                                                                "memberName": "borrowCap",
+                                                                "nodeType": "MemberAccess",
+                                                                "referencedDeclaration": 456,
+                                                                "src": "3202:16:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_uint256",
+                                                                    "typeString": "uint256"
+                                                                }
+                                                            },
+                                                            "src": "3173:45:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_bool",
+                                                                "typeString": "bool"
+                                                            }
+                                                        },
+                                                        {
+                                                            "expression": {
+                                                                "id": 311,
+                                                                "name": "Errors",
+                                                                "nodeType": "Identifier",
+                                                                "overloadedDeclarations": [],
+                                                                "referencedDeclaration": 207,
+                                                                "src": "3220:6:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                                    "typeString": "type(library Errors)"
+                                                                }
+                                                            },
+                                                            "id": 312,
+                                                            "isConstant": false,
+                                                            "isLValue": false,
+                                                            "isPure": true,
+                                                            "lValueRequested": false,
+                                                            "memberLocation": "3227:19:1",
+                                                            "memberName": "BORROW_CAP_EXCEEDED",
+                                                            "nodeType": "MemberAccess",
+                                                            "referencedDeclaration": 98,
+                                                            "src": "3220:26:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_string_memory_ptr",
+                                                                "typeString": "string memory"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "expression": {
+                                                        "argumentTypes": [
+                                                            {
+                                                                "typeIdentifier": "t_bool",
+                                                                "typeString": "bool"
+                                                            },
+                                                            {
+                                                                "typeIdentifier": "t_string_memory_ptr",
+                                                                "typeString": "string memory"
+                                                            }
+                                                        ],
+                                                        "id": 303,
+                                                        "name": "require",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [
+                                                            4294967278,
+                                                            4294967278,
+                                                            4294967278
+                                                        ],
+                                                        "referencedDeclaration": 4294967278,
+                                                        "src": "3165:7:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                            "typeString": "function (bool,string memory) pure"
+                                                        }
+                                                    },
+                                                    "id": 313,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": false,
+                                                    "kind": "functionCall",
+                                                    "lValueRequested": false,
+                                                    "nameLocations": [],
+                                                    "names": [],
+                                                    "nodeType": "FunctionCall",
+                                                    "src": "3165:82:1",
+                                                    "tryCall": false,
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_tuple$__$",
+                                                        "typeString": "tuple()"
+                                                    }
+                                                },
+                                                "id": 314,
+                                                "nodeType": "ExpressionStatement",
+                                                "src": "3165:82:1"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "commonType": {
+                                                    "typeIdentifier": "t_uint256",
+                                                    "typeString": "uint256"
+                                                },
+                                                "id": 322,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "leftExpression": {
+                                                    "expression": {
+                                                        "id": 318,
+                                                        "name": "params",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [],
+                                                        "referencedDeclaration": 221,
+                                                        "src": "3365:6:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                            "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                        }
+                                                    },
+                                                    "id": 319,
+                                                    "isConstant": false,
+                                                    "isLValue": true,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "memberLocation": "3372:12:1",
+                                                    "memberName": "amountInBase",
+                                                    "nodeType": "MemberAccess",
+                                                    "referencedDeclaration": 466,
+                                                    "src": "3365:19:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "nodeType": "BinaryOperation",
+                                                "operator": "<=",
+                                                "rightExpression": {
+                                                    "expression": {
+                                                        "id": 320,
+                                                        "name": "params",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [],
+                                                        "referencedDeclaration": 221,
+                                                        "src": "3388:6:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                            "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                        }
+                                                    },
+                                                    "id": 321,
+                                                    "isConstant": false,
+                                                    "isLValue": true,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "memberLocation": "3395:16:1",
+                                                    "memberName": "availableBorrows",
+                                                    "nodeType": "MemberAccess",
+                                                    "referencedDeclaration": 464,
+                                                    "src": "3388:23:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "src": "3365:46:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "expression": {
+                                                    "id": 323,
+                                                    "name": "Errors",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 207,
+                                                    "src": "3425:6:1",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                        "typeString": "type(library Errors)"
+                                                    }
+                                                },
+                                                "id": 324,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "lValueRequested": false,
+                                                "memberLocation": "3432:34:1",
+                                                "memberName": "COLLATERAL_CANNOT_COVER_NEW_BORROW",
+                                                "nodeType": "MemberAccess",
+                                                "referencedDeclaration": 65,
+                                                "src": "3425:41:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_string_memory_ptr",
+                                                    "typeString": "string memory"
+                                                }
+                                            ],
+                                            "id": 317,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "3344:7:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 325,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "nameLocations": [],
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "3344:132:1",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 326,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "3344:132:1"
+                                },
+                                {
+                                    "condition": {
+                                        "commonType": {
+                                            "typeIdentifier": "t_address",
+                                            "typeString": "address"
+                                        },
+                                        "id": 331,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftExpression": {
+                                            "expression": {
+                                                "id": 327,
+                                                "name": "params",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 221,
+                                                "src": "3578:6:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                    "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                }
+                                            },
+                                            "id": 328,
+                                            "isConstant": false,
+                                            "isLValue": true,
+                                            "isPure": false,
+                                            "lValueRequested": false,
+                                            "memberLocation": "3585:10:1",
+                                            "memberName": "onBehalfOf",
+                                            "nodeType": "MemberAccess",
+                                            "referencedDeclaration": 448,
+                                            "src": "3578:17:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_address",
+                                                "typeString": "address"
+                                            }
+                                        },
+                                        "nodeType": "BinaryOperation",
+                                        "operator": "!=",
+                                        "rightExpression": {
+                                            "expression": {
+                                                "id": 329,
+                                                "name": "params",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 221,
+                                                "src": "3599:6:1",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                    "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                }
+                                            },
+                                            "id": 330,
+                                            "isConstant": false,
+                                            "isLValue": true,
+                                            "isPure": false,
+                                            "lValueRequested": false,
+                                            "memberLocation": "3606:4:1",
+                                            "memberName": "user",
+                                            "nodeType": "MemberAccess",
+                                            "referencedDeclaration": 446,
+                                            "src": "3599:11:1",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_address",
+                                                "typeString": "address"
+                                            }
+                                        },
+                                        "src": "3578:32:1",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_bool",
+                                            "typeString": "bool"
+                                        }
+                                    },
+                                    "id": 343,
+                                    "nodeType": "IfStatement",
+                                    "src": "3574:196:1",
+                                    "trueBody": {
+                                        "id": 342,
+                                        "nodeType": "Block",
+                                        "src": "3612:158:1",
+                                        "statements": [
+                                            {
+                                                "expression": {
+                                                    "arguments": [
+                                                        {
+                                                            "commonType": {
+                                                                "typeIdentifier": "t_uint256",
+                                                                "typeString": "uint256"
+                                                            },
+                                                            "id": 337,
+                                                            "isConstant": false,
+                                                            "isLValue": false,
+                                                            "isPure": false,
+                                                            "lValueRequested": false,
+                                                            "leftExpression": {
+                                                                "expression": {
+                                                                    "id": 333,
+                                                                    "name": "params",
+                                                                    "nodeType": "Identifier",
+                                                                    "overloadedDeclarations": [],
+                                                                    "referencedDeclaration": 221,
+                                                                    "src": "3651:6:1",
+                                                                    "typeDescriptions": {
+                                                                        "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                        "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                                    }
+                                                                },
+                                                                "id": 334,
+                                                                "isConstant": false,
+                                                                "isLValue": true,
+                                                                "isPure": false,
+                                                                "lValueRequested": false,
+                                                                "memberLocation": "3658:18:1",
+                                                                "memberName": "delegatedAllowance",
+                                                                "nodeType": "MemberAccess",
+                                                                "referencedDeclaration": 462,
+                                                                "src": "3651:25:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_uint256",
+                                                                    "typeString": "uint256"
+                                                                }
+                                                            },
+                                                            "nodeType": "BinaryOperation",
+                                                            "operator": ">=",
+                                                            "rightExpression": {
+                                                                "expression": {
+                                                                    "id": 335,
+                                                                    "name": "params",
+                                                                    "nodeType": "Identifier",
+                                                                    "overloadedDeclarations": [],
+                                                                    "referencedDeclaration": 221,
+                                                                    "src": "3680:6:1",
+                                                                    "typeDescriptions": {
+                                                                        "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                                                        "typeString": "struct DataTypes.ExecuteBorrowParams memory"
+                                                                    }
+                                                                },
+                                                                "id": 336,
+                                                                "isConstant": false,
+                                                                "isLValue": true,
+                                                                "isPure": false,
+                                                                "lValueRequested": false,
+                                                                "memberLocation": "3687:6:1",
+                                                                "memberName": "amount",
+                                                                "nodeType": "MemberAccess",
+                                                                "referencedDeclaration": 450,
+                                                                "src": "3680:13:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_uint256",
+                                                                    "typeString": "uint256"
+                                                                }
+                                                            },
+                                                            "src": "3651:42:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_bool",
+                                                                "typeString": "bool"
+                                                            }
+                                                        },
+                                                        {
+                                                            "expression": {
+                                                                "id": 338,
+                                                                "name": "Errors",
+                                                                "nodeType": "Identifier",
+                                                                "overloadedDeclarations": [],
+                                                                "referencedDeclaration": 207,
+                                                                "src": "3711:6:1",
+                                                                "typeDescriptions": {
+                                                                    "typeIdentifier": "t_type$_t_contract$_Errors_$207_$",
+                                                                    "typeString": "type(library Errors)"
+                                                                }
+                                                            },
+                                                            "id": 339,
+                                                            "isConstant": false,
+                                                            "isLValue": false,
+                                                            "isPure": true,
+                                                            "lValueRequested": false,
+                                                            "memberLocation": "3718:27:1",
+                                                            "memberName": "BORROW_ALLOWANCE_NOT_ENOUGH",
+                                                            "nodeType": "MemberAccess",
+                                                            "referencedDeclaration": 161,
+                                                            "src": "3711:34:1",
+                                                            "typeDescriptions": {
+                                                                "typeIdentifier": "t_string_memory_ptr",
+                                                                "typeString": "string memory"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "expression": {
+                                                        "argumentTypes": [
+                                                            {
+                                                                "typeIdentifier": "t_bool",
+                                                                "typeString": "bool"
+                                                            },
+                                                            {
+                                                                "typeIdentifier": "t_string_memory_ptr",
+                                                                "typeString": "string memory"
+                                                            }
+                                                        ],
+                                                        "id": 332,
+                                                        "name": "require",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [
+                                                            4294967278,
+                                                            4294967278,
+                                                            4294967278
+                                                        ],
+                                                        "referencedDeclaration": 4294967278,
+                                                        "src": "3626:7:1",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                            "typeString": "function (bool,string memory) pure"
+                                                        }
+                                                    },
+                                                    "id": 340,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": false,
+                                                    "kind": "functionCall",
+                                                    "lValueRequested": false,
+                                                    "nameLocations": [],
+                                                    "names": [],
+                                                    "nodeType": "FunctionCall",
+                                                    "src": "3626:133:1",
+                                                    "tryCall": false,
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_tuple$__$",
+                                                        "typeString": "tuple()"
+                                                    }
+                                                },
+                                                "id": 341,
+                                                "nodeType": "ExpressionStatement",
+                                                "src": "3626:133:1"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        "documentation": {
+                            "id": 215,
+                            "nodeType": "StructuredDocumentation",
+                            "src": "381:1641:1",
+                            "text": " Validate borrow operation\n \n TODO: Implement validation checks:\n 1. require(amount > 0, Errors.INVALID_AMOUNT)\n 2. require(reserve.isActive, Errors.RESERVE_INACTIVE)\n 3. require(!reserve.isPaused, Errors.RESERVE_PAUSED)\n 4. require(reserve.borrowingEnabled, Errors.BORROWING_NOT_ENABLED)\n 5. Check interest rate mode:\n    - require(interestRateMode == 1 || interestRateMode == 2, Errors.INVALID_INTEREST_RATE_MODE_SELECTED)\n    - If mode == 1 (stable): require(reserve.stableBorrowRateEnabled, Errors.STABLE_BORROWING_NOT_ENABLED)\n 6. Check available liquidity:\n    - require(amount <= reserve.availableLiquidity, \"Insufficient liquidity\")\n 7. Check borrow cap:\n    - Get borrowCap from reserve configuration\n    - if (borrowCap > 0):\n        uint256 totalDebt = IVariableDebtToken(reserve.variableDebtTokenAddress).totalSupply()\n                          + IStableDebtToken(reserve.stableDebtTokenAddress).totalSupply()\n        require(totalDebt + amount <= borrowCap, Errors.BORROW_CAP_EXCEEDED)\n 8. Check user has enough collateral:\n    - Calculate user's available borrows in base currency\n    - Convert amount to base currency using oracle\n    - require(amountInBase <= availableBorrows, Errors.COLLATERAL_CANNOT_COVER_NEW_BORROW)\n 9. Check credit delegation (if onBehalfOf != msg.sender):\n    - Check borrowAllowance[onBehalfOf][msg.sender][asset] >= amount\n    - Deduct from allowance\n \n @param reserve The reserve state\n @param params Borrow parameters"
+                        },
+                        "id": 345,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "validateBorrow",
+                        "nameLocation": "2038:14:1",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 222,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 218,
+                                    "mutability": "mutable",
+                                    "name": "reserve",
+                                    "nameLocation": "2092:7:1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 345,
+                                    "src": "2062:37:1",
+                                    "stateVariable": false,
+                                    "storageLocation": "storage",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_ReserveData_$385_storage_ptr",
+                                        "typeString": "struct DataTypes.ReserveData"
+                                    },
+                                    "typeName": {
+                                        "id": 217,
+                                        "nodeType": "UserDefinedTypeName",
+                                        "pathNode": {
+                                            "id": 216,
+                                            "name": "DataTypes.ReserveData",
+                                            "nameLocations": [
+                                                "2062:9:1",
+                                                "2072:11:1"
+                                            ],
+                                            "nodeType": "IdentifierPath",
+                                            "referencedDeclaration": 385,
+                                            "src": "2062:21:1"
+                                        },
+                                        "referencedDeclaration": 385,
+                                        "src": "2062:21:1",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_ReserveData_$385_storage_ptr",
+                                            "typeString": "struct DataTypes.ReserveData"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                },
+                                {
+                                    "constant": false,
+                                    "id": 221,
+                                    "mutability": "mutable",
+                                    "name": "params",
+                                    "nameLocation": "2146:6:1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 345,
+                                    "src": "2109:43:1",
+                                    "stateVariable": false,
+                                    "storageLocation": "memory",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_memory_ptr",
+                                        "typeString": "struct DataTypes.ExecuteBorrowParams"
+                                    },
+                                    "typeName": {
+                                        "id": 220,
+                                        "nodeType": "UserDefinedTypeName",
+                                        "pathNode": {
+                                            "id": 219,
+                                            "name": "DataTypes.ExecuteBorrowParams",
+                                            "nameLocations": [
+                                                "2109:9:1",
+                                                "2119:19:1"
+                                            ],
+                                            "nodeType": "IdentifierPath",
+                                            "referencedDeclaration": 467,
+                                            "src": "2109:29:1"
+                                        },
+                                        "referencedDeclaration": 467,
+                                        "src": "2109:29:1",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_ExecuteBorrowParams_$467_storage_ptr",
+                                            "typeString": "struct DataTypes.ExecuteBorrowParams"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "2052:106:1"
+                        },
+                        "returnParameters": {
+                            "id": 223,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "2173:0:1"
+                        },
+                        "scope": 346,
+                        "src": "2029:1747:1",
+                        "stateMutability": "view",
+                        "virtual": false,
+                        "visibility": "internal"
+                    }
+                ],
+                "scope": 347,
+                "src": "350:5318:1",
+                "usedErrors": [],
+                "usedEvents": []
+            }
+        ],
+        "src": "37:5632:1"
+    },
+    "functionHashes": {},
+    "gasEstimates": {
+        "creation": {
+            "codeDepositCost": "11400",
+            "executionCost": "infinite",
+            "totalCost": "infinite"
+        },
+        "internal": {
+            "validateBorrow(struct DataTypes.ReserveData storage pointer,struct DataTypes.ExecuteBorrowParams memory)": "infinite"
+        }
+    }
+}

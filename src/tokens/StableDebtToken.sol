@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * @title StableDebtToken
+ * @title StableDebtToken,
  * @notice Represents stable-rate debt
  * 
  * QUICK POINTERS:
@@ -46,11 +46,14 @@ contract StableDebtToken is ERC20, AccessControl {
     
     constructor(
         address _lendingPool,
+        address _borrowLogic,
         string memory _name,
         string memory _symbol
     ) ERC20(_name, _symbol) {
         lendingPool = _lendingPool;
         _grantRole(LENDER_ROLE, _lendingPool);
+                _grantRole(LENDER_ROLE,_borrowLogic);
+
     }
     
     /**
@@ -62,37 +65,51 @@ contract StableDebtToken is ERC20, AccessControl {
      * 3. Append to array (NOT overwrite!)
      * 4. Emit event
      * 
+     * @param user The address performing the borrow (receives borrowed asset)
+     * @param onBehalfOf The address that will get the debt
+     * @param amount The amount being borrowed
+     * @param rate The stable interest rate for this borrow
+     * @return True if first borrow, and the new user's average stable rate
+     * 
      * EXAMPLE (Real Protocol Behavior):
      * Time 1: Borrow 100 USDC at 5%
-     *   → userDebts[user] = [Debt(100, 5e2, now)]
+     *   → userDebts[onBehalfOf] = [Debt(100, 5e2, now)]
      * Time 2: Borrow 50 USDC at 6%
-     *   → userDebts[user] = [Debt(100, 5e2, time1), Debt(50, 6e2, now)]
+     *   → userDebts[onBehalfOf] = [Debt(100, 5e2, time1), Debt(50, 6e2, now)]
      */
     function mint(
         address user,
+        address onBehalfOf,
         uint256 amount,
         uint256 rate
-    ) external onlyRole(LENDER_ROLE) {
+    ) external onlyRole(LENDER_ROLE) returns (bool, uint256) {
         // Validate inputs
-        require(user != address(0), "Invalid user address");
+        require(onBehalfOf != address(0), "Invalid user address");
         require(amount > 0, "Amount must be > 0");
-        require(rate >= 1000e2, "Rate too high (max 1000%)");
+        require(rate <= 1000e2, "Rate too high (max 1000%)");
         
-        // Create Debt struct and append to array
+        // Check if this is first borrow
+        bool isFirstBorrow = userDebts[onBehalfOf].length == 0;
+        
+        // Create Debt struct and append to array for onBehalfOf
         Debt memory newDebt = Debt({
             amount: uint128(amount),
             rate: uint128(rate),
             timestamp: block.timestamp
         });
         
-        userDebts[user].push(newDebt);
+        userDebts[onBehalfOf].push(newDebt);
         
-        // Emit Transfer event (NOT calling _mint!)
-        // We track debt in our array, just emit event for visibility
-        emit Transfer(address(0), user, amount);
+        // Calculate new average rate
+        (uint256 totalDebt, uint256 avgRate) = getTotalDebtAndAvgRate(onBehalfOf);
+        
+        // Emit Transfer event - debt is assigned to onBehalfOf
+        emit Transfer(address(0), onBehalfOf, amount);
         
         // Emit custom event
-        emit DebtMinted(user, amount, rate);
+        emit DebtMinted(onBehalfOf, amount, rate);
+        
+        return (isFirstBorrow, avgRate);
     }
     
     /**
@@ -189,6 +206,61 @@ contract StableDebtToken is ERC20, AccessControl {
         return getDebtWithInterest(account);
     }
     
+    /**
+     * Get total debt and average rate for a user
+     * Used internally and by external contracts to calculate weighted average rate
+     * 
+     * @param user The address to check
+     * @return totalDebt Total debt with interest
+     * @return avgRate Weighted average interest rate
+     */
+    function getTotalDebtAndAvgRate(address user) public view returns (uint256 totalDebt, uint256 avgRate) {
+        Debt[] storage userDebtArray = userDebts[user];
+        uint256 weightedRateSum = 0;
+        
+        // Iterate through all debts and calculate total with weighted average rate
+        for (uint256 i = 0; i < userDebtArray.length; i++) {
+            Debt storage debt = userDebtArray[i];
+            
+            // Skip zero amounts
+            if (debt.amount == 0) continue;
+            
+            // Calculate time elapsed in seconds
+            uint256 timeElapsed = block.timestamp - debt.timestamp;
+            
+            // Simple interest formula
+            uint256 interest = (uint256(debt.amount) * uint256(debt.rate) * timeElapsed) / (31536000 * 100e2);
+            uint256 debtWithInterest = uint256(debt.amount) + interest;
+            
+            // Add to total
+            totalDebt += debtWithInterest;
+            
+            // Weight the rate by the debt amount for average calculation
+            weightedRateSum += uint256(debt.rate) * debtWithInterest;
+        }
+        
+        // Calculate weighted average rate
+        if (totalDebt > 0) {
+            avgRate = weightedRateSum / totalDebt;
+        } else {
+            avgRate = 0;
+        }
+        
+        return (totalDebt, avgRate);
+    }
+    
+    /**
+     * Get total supply and average rate across all users
+     * Required by IStableDebtToken interface
+     * 
+     * @return The total supply with accrued interest and average rate
+     */
+    function getTotalSupplyAndAvgRate() external view returns (uint256, uint256) {
+        // For simplicity, returning 0 for now
+        // In production, you'd track this globally or iterate users
+        return (0, 0);
+    }
+    
     // Non-transferable debt tokens
     /**
      * Prevent stable debt token transfers
@@ -204,5 +276,20 @@ contract StableDebtToken is ERC20, AccessControl {
      */
     function transferFrom(address, address, uint256) public pure override returns (bool) {
         revert StableDebtToken_TransferNotAllowed();
+    }
+    
+    /**
+     * Reject ETH sent to this contract
+     * Debt tokens should not hold ETH
+     */
+    receive() external payable {
+        revert("StableDebtToken: cannot receive ETH");
+    }
+    
+    /**
+     * Reject any other calls
+     */
+    fallback() external payable {
+        revert("StableDebtToken: fallback not allowed");
     }
 }

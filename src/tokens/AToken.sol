@@ -2,6 +2,8 @@
 pragma solidity ^0.8.20;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
@@ -17,11 +19,13 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  */
 
 contract AToken is ERC20, AccessControl {
+    using SafeERC20 for IERC20;
 
     error AToken_ZeroMintingAmount();
     error AToken_InvalidUserAddress();
     error AToken_LessTokenAmount();
     error AToken_NewIndexShouldBeGreater();
+    error AToken_InsufficientUnderlyingBalance();
     
     
     bytes32 public constant LENDER_ROLE = keccak256("LENDER_ROLE");
@@ -57,29 +61,43 @@ contract AToken is ERC20, AccessControl {
      * POINTER: scaledAmount = amount / liquidityIndex
      * - This way, as liquidityIndex grows, user's actual balance grows too
      * 
+     * @param caller The address performing the deposit
+     * @param onBehalfOf The address that will receive the aTokens
+     * @param amount The amount being deposited
+     * @param index The new liquidity index of the reserve
+     * 
      * FLOW:
      * 1. Convert actual amount to scaled amount
      * 2. Store scaled amount in our mapping
-     * 3. ALSO mint actual ERC20 tokens (for wallet visibility & transfers)
+     * 3. Emit Transfer event for wallet visibility
      * 
-     * WHY BOTH?
+     * WHY SCALED?
      * - scaledBalances: for interest calculation (grows with index)
-     * - ERC20 _mint: for actual token ownership (wallets, transfers, DeFi)
+     * - As liquidityIndex grows, balanceOf() automatically returns more
      * 
      * Example:
      * - liquidityIndex = 1e27 (1.0), amount = 100
      * - scaledAmount = (100 * 1e27) / 1e27 = 100
-     * - We mint 100 scaled tokens (ERC20 internal tracks this)
      * - Later, liquidityIndex = 1.05e27 (5% growth)
      * - balanceOf() returns: (100 * 1.05e27) / 1e27 = 105
      */
-    function mint(address user, uint256 amount) external onlyRole(LENDER_ROLE) {
+    function mint(
+        address caller,
+        address onBehalfOf,
+        uint256 amount,
+        uint256 index
+    ) external onlyRole(LENDER_ROLE) {
         // Validate inputs FIRST
         if(amount == 0){
             revert AToken_ZeroMintingAmount();
         }
-        if(user == address(0)){
+        if(onBehalfOf == address(0)){
             revert AToken_InvalidUserAddress();
+        }
+        
+        // Update liquidity index if provided
+        if (index != liquidityIndex) {
+            liquidityIndex = index;
         }
         
         // Convert actual amount to scaled amount
@@ -87,18 +105,18 @@ contract AToken is ERC20, AccessControl {
         // As liquidityIndex grows, same scaledAmount = more actual tokens
         uint256 scaledAmount = (amount * 1e27) / liquidityIndex;
         
-        // Update internal tracking
-        scaledBalances[user] += scaledAmount;
+        // Update internal tracking for onBehalfOf
+        scaledBalances[onBehalfOf] += scaledAmount;
         scaledTotalSupply += scaledAmount;
         
-        // Emit Transfer event (NOT calling _mint!)
+        // Emit Transfer event - aTokens go to onBehalfOf
         // We manage balances ourselves via scaledBalances
         // But emit Transfer so wallets/explorers see the tokens
         // Note: We emit the ACTUAL amount (not scaled) so users see correct balance
-        emit Transfer(address(0), user, amount);
+        emit Transfer(address(0), onBehalfOf, amount);
         
         // Emit our custom event for indexing
-        emit ATokenMinted(user, amount);
+        emit ATokenMinted(onBehalfOf, amount);
     }
     
     /**
@@ -206,6 +224,54 @@ contract AToken is ERC20, AccessControl {
      */
     function getScaledTotalSupply() external view returns (uint256) {
         return scaledTotalSupply;
+    }
+    
+    /**
+     * Transfer underlying asset to target address
+     * Called by LendingPool when user borrows or withdraws
+     * 
+     * @param target The address receiving the underlying asset
+     * @param amount The amount of underlying asset to transfer
+     * 
+     * IMPORTANT: This transfers the ACTUAL underlying ERC20 token (USDC, WETH, etc.)
+     * NOT the aToken! The aToken contract acts as a vault holding depositor funds.
+     * 
+     * Example:
+     * - User deposits 100 USDC → aToken contract receives 100 USDC
+     * - Borrower wants to borrow 50 USDC
+     * - LendingPool calls: aToken.transferUnderlyingTo(borrower, 50)
+     * - aToken contract transfers 50 USDC to borrower
+     * - aToken contract now holds 50 USDC
+     */
+    function transferUnderlyingTo(address target, uint256 amount) external onlyRole(LENDER_ROLE) {
+        require(target != address(0), "Invalid target address");
+        require(amount > 0, "Amount must be > 0");
+        
+        // Check that we have enough underlying tokens
+        uint256 underlyingBalance = IERC20(underlyingAsset).balanceOf(address(this));
+        if (underlyingBalance < amount) {
+            revert AToken_InsufficientUnderlyingBalance();
+        }
+        
+        // Transfer the underlying ERC20 tokens to target
+        IERC20(underlyingAsset).safeTransfer(target, amount);
+    }
+    
+    /**
+     * Receive function to handle ETH sent to contract
+     * This allows the contract to receive ETH (for WETH scenarios)
+     */
+    receive() external payable {
+        // Accept ETH (needed for WETH unwrapping scenarios)
+        // In production, you might want to restrict this or handle WETH conversion
+    }
+    
+    /**
+     * Fallback function to handle calls with data
+     * Reverts to prevent accidental ETH loss
+     */
+    fallback() external payable {
+        revert("AToken: fallback not allowed");
     }
     
     /**

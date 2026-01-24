@@ -3,7 +3,13 @@ pragma solidity ^0.8.20;
 
 import {DataTypes} from '../types/DataTypes.sol';
 import {Errors} from '../helpers/Errors.sol';
-import {}
+import {IAToken} from '../../interfaces/IAToken.sol';
+import {IVariableDebtToken} from '../../interfaces/IVariableDebtToken.sol';
+import {IStableDebtToken} from '../../interfaces/IStableDebtToken.sol';
+import {IInterestRateStrategy} from '../../interfaces/IInterestRateStrategy.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+
 
 /**
  * @title BorrowLogic
@@ -11,10 +17,30 @@ import {}
  * - Validation
  * - Execution
  * - Debt token minting
- * 
- * TODO: Implement borrow validation and execution
  */
 library BorrowLogic {
+    using SafeERC20 for IERC20;
+    
+    // ==================== EVENTS ====================
+    
+    event Borrow(`
+        address indexed reserve,
+        address user,
+        address indexed onBehalfOf,
+        uint256 amount,
+        uint8 interestRateMode,
+        uint256 borrowRate,
+        uint16 indexed referralCode
+    );
+    
+    event ReserveDataUpdated(
+        address indexed reserve,
+        uint256 liquidityRate,
+        uint256 stableBorrowRate,
+        uint256 variableBorrowRate,
+        uint256 liquidityIndex,
+        uint256 variableBorrowIndex
+    );
     
     /**
      * Validate borrow operation
@@ -46,79 +72,232 @@ library BorrowLogic {
      * @param reserve The reserve state
      * @param params Borrow parameters
      */
+
+
     function validateBorrow(
         DataTypes.ReserveData storage reserve,
         DataTypes.ExecuteBorrowParams memory params
     ) internal view {
-        // TODO: Implement validation
-        require(params.amount>0,'11');
-        require(reserve.isActive,'12');
-        require(!reserve.isPaused,'14');
-        require(reserve.borrowingEnabled,'15');
-        require(params.interestRateMode==1 || params.interestRateMode==2,'18');
-        if(params.interestRateMode==1){
-            require(reserve.stableBorrowRateEnabled,'16');
-
-        }
-        require(reserve.availableLiquidity>params.amount,'Insufficient Liquidity');
-        if(params.borrowCap>0){ //*************************** please fix reserve.borrowCap in future */
-            uint256 val=IVariableDebtToken(reserve.variableDebtTokenAddress).totalSupply()+IStableDebtToken(reserve.stableDebtToken).totalSupply();
-            require(val+params.amount<borrowCap,'32');
-        }
-        require(params.borrowCap>0,'35');
-        require(params.amountInBase<= availableBorrows,'21');
-        // require()
-        // will 
+        // 1. Amount validation
+        require(params.amount > 0, Errors.INVALID_AMOUNT);
         
-
-
+        // 2. Reserve status checks
+        require(reserve.isActive, Errors.RESERVE_INACTIVE);
+        require(!reserve.isPaused, Errors.RESERVE_PAUSED);
+        require(reserve.borrowingEnabled, Errors.BORROWING_NOT_ENABLED);
+        
+        // 3. Interest rate mode validation
+        require(
+            params.interestRateMode == 1 || params.interestRateMode == 2,
+            Errors.INVALID_INTEREST_RATE_MODE_SELECTED
+        );
+        if (params.interestRateMode == 1) {
+            require(reserve.stableBorrowRateEnabled, Errors.STABLE_BORROWING_NOT_ENABLED);
+        }
+        
+        // 4. Liquidity check
+        require(reserve.availableLiquidity >= params.amount, 'Insufficient liquidity');
+        
+        // 5. Borrow cap check (if set)
+        if (params.borrowCap > 0) {
+            uint256 totalDebt = params.totalStableDebt + params.totalVariableDebt;
+            require(totalDebt + params.amount <= params.borrowCap, Errors.BORROW_CAP_EXCEEDED);
+        }
+        
+        // 6. Collateral check - ensure user can borrow this amount
+        require(
+            params.amountInBase <= params.availableBorrows,
+            Errors.COLLATERAL_CANNOT_COVER_NEW_BORROW
+        );
+        
+        // 7. Credit delegation check (if borrowing on behalf of someone else)
+        if (params.onBehalfOf != params.user) {
+            require(
+                params.delegatedAllowance >= params.amount,
+                Errors.BORROW_ALLOWANCE_NOT_ENOUGH
+            );
+        }
     }
     
     /**
-     * Execute borrow operation
-     * 
-     * TODO: Implement borrow execution:
-     * 1. Update reserve state:
-     *    - Call updateState(reserve) to accrue interest
-     * 
-     * 2. Mint debt tokens:
-     *    - If interestRateMode == 1 (stable):
-     *        uint256 currentStableRate = reserve.currentStableBorrowRate
-     *        IStableDebtToken(reserve.stableDebtTokenAddress).mint(onBehalfOf, amount, currentStableRate)
-     *    - If interestRateMode == 2 (variable):
-     *        IVariableDebtToken(reserve.variableDebtTokenAddress).mint(onBehalfOf, amount)
-     * 
-     * 3. Update reserve liquidity:
-     *    - reserve.availableLiquidity -= amount
-     * 
-     * 4. Transfer tokens to borrower:
-     *    - IAToken(reserve.aTokenAddress).transferUnderlyingTo(user, amount)
-     *    - Or: IERC20(asset).safeTransfer(user, amount)
-     * 
-     * 5. Update user configuration:
-     *    - Set user's borrowing bitmap for this reserve
-     *    - userConfig.setBorrowing(reserve.id, true)
-     * 
-     * 6. Check final health factor:
-     *    - Calculate health factor after borrow
-     *    - require(healthFactor >= 1e18, Errors.HEALTH_FACTOR_LOWER_THAN_LIQUIDATION_THRESHOLD)
-     * 
-     * 7. Update interest rates:
-     *    - Calculate new rates based on utilization
-     *    - Update reserve.currentLiquidityRate, currentVariableBorrowRate, currentStableBorrowRate
-     * 
-     * 8. Emit event:
-     *    - emit Borrow(user, asset, amount, interestRateMode, borrowRate, referralCode)
-     * 
+     * @notice Executes a borrow operation
+     * @dev This is where the actual state changes happen
      * @param reserve The reserve state
      * @param params Borrow parameters
-     * @return bool Success
      */
     function executeBorrow(
         DataTypes.ReserveData storage reserve,
         DataTypes.ExecuteBorrowParams memory params
-    ) internal returns (bool) {
-        // TODO: Implement execution
-        return true;
+    ) internal {
+        // 1. Update indexes (accrue interest) before any state changes
+        updateState(reserve);
+        
+        // 2. Mint debt tokens to the borrower
+        uint256 currentBorrowRate;
+        
+        if (params.interestRateMode == 1) {
+            // Stable rate borrowing
+            currentBorrowRate = reserve.currentStableBorrowRate;
+            
+            IStableDebtToken(reserve.stableDebtTokenAddress).mint(
+                params.user,
+                params.onBehalfOf,
+                params.amount,
+                currentBorrowRate
+            );
+        } else {
+            // Variable rate borrowing (mode == 2)
+            currentBorrowRate = reserve.currentVariableBorrowRate;
+            
+            IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
+                params.user,
+                params.onBehalfOf,
+                params.amount,
+                currentBorrowRate
+            );
+        }
+        
+        // 3. Update reserve available liquidity (decrease)
+        reserve.availableLiquidity -= params.amount;
+        
+        // 4. Transfer UNDERLYING asset (e.g., USDC, WETH) to the borrower
+        // NOT aTokens! The aToken contract holds the underlying assets from depositors
+        // This function transfers the actual underlying ERC20 tokens to the user
+        IAToken(reserve.aTokenAddress).transferUnderlyingTo(params.user, params.amount);
+        
+        // 5. Update interest rates based on new utilization
+        updateInterestRates(reserve, params.asset, 0, params.amount);
+        
+        // 6. Emit borrow event
+        emit Borrow(
+            params.asset,
+            params.user,
+            params.onBehalfOf,
+            params.amount,
+            uint8(params.interestRateMode),
+            currentBorrowRate,
+            params.referralCode
+        );
+    }
+    
+    /**
+     * @notice Updates the reserve state by accruing interest
+     * @dev Called before any operation that changes reserve state
+     * @param reserve The reserve to update
+     */
+    function updateState(DataTypes.ReserveData storage reserve) internal {
+        uint256 currentTimestamp = block.timestamp;
+        uint40 lastUpdateTimestamp = reserve.lastUpdateTimestamp;
+        
+        // If no time has passed, no need to update
+        if (currentTimestamp == lastUpdateTimestamp) {
+            return;
+        }
+        
+        // Calculate time delta
+        uint256 timeDelta = currentTimestamp - lastUpdateTimestamp;
+        
+        // Get current rates
+        uint256 liquidityRate = reserve.currentLiquidityRate;
+        uint256 variableBorrowRate = reserve.currentVariableBorrowRate;
+        
+        // Update liquidity index (for aToken balance growth)
+        if (liquidityRate > 0) {
+            uint256 linearInterest = calculateLinearInterest(liquidityRate, timeDelta);
+            reserve.liquidityIndex = uint128(
+                (uint256(reserve.liquidityIndex) * linearInterest) / 1e27
+            );
+        }
+        
+        // Update variable borrow index (for debt growth)
+        if (variableBorrowRate > 0) {
+            uint256 compoundedInterest = calculateCompoundedInterest(variableBorrowRate, timeDelta);
+            reserve.variableBorrowIndex = uint128(
+                (uint256(reserve.variableBorrowIndex) * compoundedInterest) / 1e27
+            );
+        }
+        
+        // Update timestamp
+        reserve.lastUpdateTimestamp = uint40(currentTimestamp);
+    }
+    
+    /**
+     * @notice Updates interest rates after a borrow/repay operation
+     * @param reserve The reserve to update
+     * @param asset The asset address
+     * @param liquidityAdded Amount of liquidity added (from repay)
+     * @param liquidityTaken Amount of liquidity taken (from borrow)
+     */
+    function updateInterestRates(
+        DataTypes.ReserveData storage reserve,
+        address asset,
+        uint256 liquidityAdded,
+        uint256 liquidityTaken
+    ) internal {
+        // Get total debts
+        uint256 totalStableDebt = IStableDebtToken(reserve.stableDebtTokenAddress).totalSupply();
+        uint256 totalVariableDebt = IVariableDebtToken(reserve.variableDebtTokenAddress).totalSupply();
+        
+        // Get average stable rate
+        (uint256 avgStableRate, ) = IStableDebtToken(reserve.stableDebtTokenAddress).getTotalSupplyAndAvgRate();
+        
+        // Call interest rate strategy
+        IInterestRateStrategy.CalculateInterestRatesParams memory rateParams = 
+            IInterestRateStrategy.CalculateInterestRatesParams({
+                unbacked: 0,
+                liquidityAdded: liquidityAdded,
+                liquidityTaken: liquidityTaken,
+                totalStableDebt: totalStableDebt,
+                totalVariableDebt: totalVariableDebt,
+                averageStableBorrowRate: avgStableRate,
+                reserveFactor: 0, // Should come from reserve config
+                reserve: asset,
+                aToken: reserve.aTokenAddress
+            });
+        
+        (
+            uint256 newLiquidityRate,
+            uint256 newStableBorrowRate,
+            uint256 newVariableBorrowRate
+        ) = IInterestRateStrategy(reserve.interestRateStrategyAddress).calculateInterestRates(rateParams);
+        
+        // Update reserve rates
+        reserve.currentLiquidityRate = uint128(newLiquidityRate);
+        reserve.currentStableBorrowRate = uint128(newStableBorrowRate);
+        reserve.currentVariableBorrowRate = uint128(newVariableBorrowRate);
+        
+        // Emit event
+        emit ReserveDataUpdated(
+            asset,
+            newLiquidityRate,
+            newStableBorrowRate,
+            newVariableBorrowRate,
+            reserve.liquidityIndex,
+            reserve.variableBorrowIndex
+        );
+    }
+    
+    /**
+     * @notice Calculates linear interest (for liquidity index)
+     * @param rate The interest rate (in ray units, 1e27)
+     * @param timeDelta Time elapsed since last update
+     * @return The linear interest multiplier
+     */
+    function calculateLinearInterest(uint256 rate, uint256 timeDelta) internal pure returns (uint256) {
+        // linearInterest = 1 + (rate * timeDelta / secondsPerYear)
+        // In ray: 1e27 + (rate * timeDelta / 31536000)
+        return 1e27 + ((rate * timeDelta) / 365 days);
+    }
+    
+    /**
+     * @notice Calculates compound interest (for variable borrow index)
+     * @param rate The interest rate (in ray units, 1e27)
+     * @param timeDelta Time elapsed since last update
+     * @return The compound interest multiplier
+     */
+    function calculateCompoundedInterest(uint256 rate, uint256 timeDelta) internal pure returns (uint256) {
+        // For simplicity, using linear for now
+        // Production would use actual compound calculation
+        return calculateLinearInterest(rate, timeDelta);
     }
 }

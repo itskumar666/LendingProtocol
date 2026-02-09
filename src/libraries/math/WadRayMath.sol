@@ -127,4 +127,31 @@ library WadRayMath {
         // TODO: Implement
         return a * WAD_RAY_RATIO;
     }
+    
+    /**
+     * @notice Calculates linear interest (for liquidity index)
+     * @param rate The interest rate (in ray units, 1e27)
+     * @param timeDelta Time elapsed since last update in seconds
+     * @return The linear interest multiplier in RAY
+     * 
+     * @dev Formula: 1 + (rate * timeDelta / secondsPerYear)
+     * Used to grow liquidity index for aToken balances
+     */
+    function calculateLinearInterest(uint256 rate, uint256 timeDelta) internal pure returns (uint256) {
+        return 1e27 + ((rate * timeDelta) / 365 days);
+    }
+    
+    /**
+     * @notice Calculates compound interest (for variable borrow index)
+     * @param rate The interest rate (in ray units, 1e27)
+     * @param timeDelta Time elapsed since last update in seconds
+     * @return The compound interest multiplier in RAY
+     * 
+     * @dev For simplicity, using linear for now
+     * Production would use actual compound calculation with exponentials
+     * Used to grow variable borrow index for debt balances
+     */
+    function calculateCompoundedInterest(uint256 rate, uint256 timeDelta) internal pure returns (uint256) {
+        return calculateLinearInterest(rate, timeDelta);
+    }
 }

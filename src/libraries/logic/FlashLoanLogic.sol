@@ -3,119 +3,342 @@ pragma solidity ^0.8.20;
 
 import {DataTypes} from '../types/DataTypes.sol';
 import {Errors} from '../helpers/Errors.sol';
+import {ReserveConfiguration} from '../configuration/ReserveConfiguration.sol';
+import {PercentageMath} from '../math/PercentageMath.sol';
+import {WadRayMath} from '../math/WadRayMath.sol';
+import {ValidationLogic} from './ValidationLogic.sol';
+import {IAToken} from '../../interfaces/IAToken.sol';
+import {IFlashLoanReceiver, IFlashLoanSimpleReceiver} from '../../interfaces/IFlashLoanReceiver.sol';
+import {IInterestRateStrategy} from '../../interfaces/IInterestRateStrategy.sol';
+import {IStableDebtToken} from '../../interfaces/IStableDebtToken.sol';
+import {IVariableDebtToken} from '../../interfaces/IVariableDebtToken.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
 /**
  * @title FlashLoanLogic
- * @notice Handles ALL flash loan operations
- * - Validation
- * - Execution
- * - Premium calculation
- * - Callback to receiver
+ * @notice Handles flash loan operations
+ * @dev Flash loans allow borrowing assets without collateral, 
+ * as long as they are repaid within the same transaction
  * 
- * TODO: Implement flash loan validation and execution
+ * Flash Loan Process:
+ * 1. Transfer assets to receiver
+ * 2. Call executeOperation() on receiver
+ * 3. Verify repayment with premium (fee)
+ * 4. Update interest rates
+ * 
+ * Use cases:
+ * - Arbitrage between DEXs
+ * - Collateral swaps
+ * - Self-liquidation
+ * - Leverage/deleverage positions
  */
 library FlashLoanLogic {
+    using ReserveConfiguration for DataTypes.ReserveConfigurationMap;
+    using PercentageMath for uint256;
+    using WadRayMath for uint256;
+    using SafeERC20 for IERC20;
+    
+    // ============ Constants ============
+    
+    /// @notice Flash loan premium (fee) in basis points: 9 = 0.09%
+    uint256 public constant FLASHLOAN_PREMIUM_TOTAL = 9;
+    
+    /// @notice Portion of premium going to protocol treasury
+    uint256 public constant FLASHLOAN_PREMIUM_TO_PROTOCOL = 0;
+    
+    /// @notice Basis points denominator
+    uint256 public constant PERCENTAGE_FACTOR = 10000;
+    
+    // ============ Events ============
+    
+    event FlashLoan(
+        address indexed target,
+        address indexed initiator,
+        address indexed asset,
+        uint256 amount,
+        uint256 interestRateMode,
+        uint256 premium,
+        uint16 referralCode
+    );
+    
+    event ReserveDataUpdated(
+        address indexed reserve,
+        uint256 liquidityRate,
+        uint256 stableBorrowRate,
+        uint256 variableBorrowRate,
+        uint256 liquidityIndex,
+        uint256 variableBorrowIndex
+    );
+    
+    // ============ Structs ============
+    
+    struct FlashLoanLocalVars {
+        uint256 i;
+        uint256 currentAmount;
+        uint256 currentPremium;
+        uint256 currentAmountPlusPremium;
+        address currentAsset;
+        address currentATokenAddress;
+        uint256 flashloanPremiumTotal;
+        uint256 flashloanPremiumToProtocol;
+    }
+    
+    struct FlashLoanSimpleLocalVars {
+        uint256 premium;
+        uint256 amountPlusPremium;
+        uint256 totalDebt;
+        IAToken aToken;
+    }
+    
+    // ============ Main Functions ============
     
     /**
-     * Validate flash loan
-     * 
-     * TODO: Implement validation checks:
-     * 1. Check arrays valid:
-     *    - require(assets.length == amounts.length, Errors.INCONSISTENT_FLASHLOAN_PARAMS)
-     *    - require(assets.length > 0, "Empty arrays")
-     * 
-     * 2. For each asset:
-     *    - require(amounts[i] > 0, Errors.INVALID_AMOUNT)
-     *    - DataTypes.ReserveData storage reserve = reserves[assets[i]]
-     *    - require(reserve.isActive, Errors.RESERVE_INACTIVE)
-     *    - require(!reserve.isPaused, Errors.RESERVE_PAUSED)
-     *    - Check available liquidity:
-     *        require(amounts[i] <= reserve.availableLiquidity, Errors.INSUFFICIENT_LIQUIDITY_TO_FLASHLOAN)
-     * 
-     * 3. Check receiver address:
-     *    - require(receiverAddress != address(0), "Invalid receiver")
-     * 
-     * @param assets Array of asset addresses
-     * @param amounts Array of amounts to flash loan
+     * @notice Execute flash loan for multiple assets
+     * @param reservesData Mapping of all reserves
+     * @param params Flash loan parameters
+     * @param flashloanPremiumTotal Total premium in basis points
+     * @param flashloanPremiumToProtocol Protocol's share of premium
+     * @return True if flash loan was successful
      */
-    function validateFlashLoan(
-        address[] memory assets,
-        uint256[] memory amounts
-    ) internal view {
-        // TODO: Implement validation
+    function executeFlashLoan(
+        mapping(address => DataTypes.ReserveData) storage reservesData,
+        DataTypes.ExecuteFlashLoanParams memory params,
+        uint256 flashloanPremiumTotal,
+        uint256 flashloanPremiumToProtocol
+    ) internal returns (bool) {
+        FlashLoanLocalVars memory vars;
+        vars.flashloanPremiumTotal = flashloanPremiumTotal;
+        vars.flashloanPremiumToProtocol = flashloanPremiumToProtocol;
+        
+        uint256[] memory premiums = new uint256[](params.assets.length);
+        uint256[] memory amountsToTransfer = new uint256[](params.assets.length);
+        
+        // Validate and transfer assets to receiver
+        for (vars.i = 0; vars.i < params.assets.length; vars.i++) {
+            vars.currentAsset = params.assets[vars.i];
+            vars.currentAmount = params.amounts[vars.i];
+            
+            DataTypes.ReserveData storage reserve = reservesData[vars.currentAsset];
+            vars.currentATokenAddress = reserve.aTokenAddress;
+            
+            // Validate flash loan for this asset
+            ValidationLogic.validateFlashLoanSimple(reserve, vars.currentAmount);
+            
+            // Calculate premium
+            premiums[vars.i] = vars.currentAmount.percentMul(vars.flashloanPremiumTotal);
+            amountsToTransfer[vars.i] = vars.currentAmount;
+            
+            // Transfer asset from aToken to receiver
+            IAToken(vars.currentATokenAddress).transferUnderlyingTo(
+                params.receiverAddress,
+                vars.currentAmount
+            );
+        }
+        
+        // Call receiver's executeOperation
+        require(
+            IFlashLoanReceiver(params.receiverAddress).executeOperation(
+                params.assets,
+                params.amounts,
+                premiums,
+                msg.sender,
+                params.params
+            ),
+            Errors.INVALID_FLASHLOAN_EXECUTOR_RETURN
+        );
+        
+        // Verify repayment and collect premiums
+        for (vars.i = 0; vars.i < params.assets.length; vars.i++) {
+            vars.currentAsset = params.assets[vars.i];
+            vars.currentAmount = params.amounts[vars.i];
+            vars.currentPremium = premiums[vars.i];
+            vars.currentAmountPlusPremium = vars.currentAmount + vars.currentPremium;
+            
+            DataTypes.ReserveData storage reserve = reservesData[vars.currentAsset];
+            vars.currentATokenAddress = reserve.aTokenAddress;
+            
+            // Check if borrowing instead of repaying
+            if (params.interestRateModes[vars.i] != 0) {
+                // Borrow mode - mint debt tokens instead of repaying
+                _handleFlashLoanBorrow(
+                    reserve,
+                    vars.currentAsset,
+                    vars.currentAmount,
+                    params.interestRateModes[vars.i],
+                    params.onBehalfOf
+                );
+            } else {
+                // Repay mode - transfer back to aToken
+                IERC20(vars.currentAsset).safeTransferFrom(
+                    params.receiverAddress,
+                    vars.currentATokenAddress,
+                    vars.currentAmountPlusPremium
+                );
+                
+                // Update reserve liquidity (premium added)
+                reserve.availableLiquidity += vars.currentPremium;
+            }
+            
+            // Update interest rates
+            _updateInterestRates(reserve, vars.currentAsset);
+            
+            emit FlashLoan(
+                params.receiverAddress,
+                msg.sender,
+                vars.currentAsset,
+                vars.currentAmount,
+                params.interestRateModes[vars.i],
+                vars.currentPremium,
+                params.referralCode
+            );
+        }
+        
+        return true;
     }
     
     /**
-     * Execute flash loan
-     * 
-     * TODO: Implement flash loan execution:
-     * 1. Calculate premiums:
-     *    - uint256[] memory premiums = new uint256[](assets.length)
-     *    - for each asset:
-     *        premiums[i] = (amounts[i] * flashLoanPremiumTotal) / 10000
-     *        // Example: 10000 USDC * 9 / 10000 = 9 USDC fee (0.09%)
-     * 
-     * 2. Update reserve states for all assets:
-     *    - for each asset:
-     *        updateState(reserves[assets[i]])
-     * 
-     * 3. Transfer assets to receiver:
-     *    - for each asset:
-     *        IAToken(reserves[assets[i]].aTokenAddress).transferUnderlyingTo(receiverAddress, amounts[i])
-     *        // Or: IERC20(assets[i]).safeTransfer(receiverAddress, amounts[i])
-     *        reserves[assets[i]].availableLiquidity -= amounts[i]
-     * 
-     * 4. Execute receiver's logic (THIS IS WHERE MAGIC HAPPENS):
-     *    - bool success = IFlashLoanReceiver(receiverAddress).executeOperation(
-     *          assets,
-     *          amounts,
-     *          premiums,
-     *          msg.sender, // initiator
-     *          params
-     *      )
-     *    - require(success, Errors.INVALID_FLASHLOAN_EXECUTOR_RETURN)
-     *    - Receiver does: arbitrage, liquidation, collateral swap, etc.
-     * 
-     * 5. Verify repayment (CRITICAL - must happen in same transaction!):
-     *    - for each asset:
-     *        uint256 amountOwed = amounts[i] + premiums[i]
-     *        uint256 currentBalance = IERC20(assets[i]).balanceOf(aTokenAddress)
-     *        require(currentBalance >= amountOwed, Errors.INCONSISTENT_FLASHLOAN_AMOUNTS)
-     *        // Receiver MUST have transferred back amount + premium
-     * 
-     * 6. Update reserves:
-     *    - for each asset:
-     *        reserves[assets[i]].availableLiquidity += amounts[i] + premiums[i]
-     *        // Premium goes to liquidity providers!
-     * 
-     * 7. Handle protocol fee (optional):
-     *    - if (flashLoanPremiumToProtocol > 0):
-     *        uint256 protocolFee = (premiums[i] * flashLoanPremiumToProtocol) / flashLoanPremiumTotal
-     *        // Transfer to treasury
-     * 
-     * 8. Mint aTokens for premium (interest for depositors):
-     *    - uint256 premiumToLP = premiums[i] - protocolFee
-     *    - IAToken(aTokenAddress).mintToTreasury(premiumToLP)
-     * 
-     * 9. Update interest rates for all assets
-     * 
-     * 10. Emit events:
-     *     - for each asset:
-     *         emit FlashLoan(receiverAddress, msg.sender, assets[i], amounts[i], premiums[i])
-     * 
-     * @param assets Array of assets to flash loan
-     * @param amounts Array of amounts
-     * @param premiums Array of calculated premiums
-     * @param receiverAddress Contract that receives the flash loan
-     * @param params Arbitrary data passed to receiver
+     * @notice Execute simple flash loan (single asset)
+     * @param reserve The reserve data
+     * @param params Flash loan simple parameters
+     * @param flashloanPremiumTotal Total premium in basis points
+     * @return True if flash loan was successful
      */
-    function executeFlashLoan(
-        address[] memory assets,
-        uint256[] memory amounts,
-        uint256[] memory premiums,
-        address receiverAddress,
-        bytes memory params
+    function executeFlashLoanSimple(
+        DataTypes.ReserveData storage reserve,
+        DataTypes.ExecuteFlashLoanSimpleParams memory params,
+        uint256 flashloanPremiumTotal
+    ) internal returns (bool) {
+        FlashLoanSimpleLocalVars memory vars;
+        
+        // Validate
+        ValidationLogic.validateFlashLoanSimple(reserve, params.amount);
+        
+        vars.aToken = IAToken(reserve.aTokenAddress);
+        
+        // Calculate premium
+        vars.premium = params.amount.percentMul(flashloanPremiumTotal);
+        vars.amountPlusPremium = params.amount + vars.premium;
+        
+        // Transfer asset to receiver
+        vars.aToken.transferUnderlyingTo(params.receiverAddress, params.amount);
+        
+        // Call receiver's executeOperation
+        require(
+            IFlashLoanSimpleReceiver(params.receiverAddress).executeOperation(
+                params.asset,
+                params.amount,
+                vars.premium,
+                msg.sender,
+                params.params
+            ),
+            Errors.INVALID_FLASHLOAN_EXECUTOR_RETURN
+        );
+        
+        // Transfer back amount + premium
+        IERC20(params.asset).safeTransferFrom(
+            params.receiverAddress,
+            address(vars.aToken),
+            vars.amountPlusPremium
+        );
+        
+        // Update reserve liquidity
+        reserve.availableLiquidity += vars.premium;
+        
+        // Update interest rates
+        _updateInterestRates(reserve, params.asset);
+        
+        emit FlashLoan(
+            params.receiverAddress,
+            msg.sender,
+            params.asset,
+            params.amount,
+            0, // No borrow mode for simple flash loan
+            vars.premium,
+            params.referralCode
+        );
+        
+        return true;
+    }
+    
+    // ============ Internal Functions ============
+    
+    /**
+     * @notice Handle flash loan borrow mode
+     * @dev Instead of repaying, user takes on debt
+     */
+    function _handleFlashLoanBorrow(
+        DataTypes.ReserveData storage reserve,
+        address asset,
+        uint256 amount,
+        uint256 interestRateMode,
+        address onBehalfOf
     ) internal {
-        // TODO: Implement execution
+        // Mint debt tokens
+        if (interestRateMode == DataTypes.INTEREST_RATE_MODE_STABLE) {
+            IStableDebtToken(reserve.stableDebtTokenAddress).mint(
+                onBehalfOf,
+                onBehalfOf,
+                amount,
+                reserve.currentStableBorrowRate
+            );
+        } else {
+            IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
+                onBehalfOf,
+                onBehalfOf,
+                amount,
+                reserve.variableBorrowIndex
+            );
+        }
+        
+        // Reduce available liquidity
+        reserve.availableLiquidity -= amount;
+    }
+    
+    /**
+     * @notice Update interest rates after flash loan
+     */
+    function _updateInterestRates(
+        DataTypes.ReserveData storage reserve,
+        address asset
+    ) internal {
+        uint256 totalStableDebt = IStableDebtToken(reserve.stableDebtTokenAddress).totalSupply();
+        uint256 totalVariableDebt = IVariableDebtToken(reserve.variableDebtTokenAddress).totalSupply();
+        uint256 totalDebt = totalStableDebt + totalVariableDebt;
+        
+        (
+            uint256 newLiquidityRate,
+            uint256 newVariableRate,
+            uint256 newStableRate
+        ) = IInterestRateStrategy(reserve.interestRateStrategyAddress).calculateInterestRate(
+            reserve.availableLiquidity,
+            totalDebt
+        );
+        
+        reserve.currentLiquidityRate = uint128(newLiquidityRate);
+        reserve.currentVariableBorrowRate = uint128(newVariableRate);
+        reserve.currentStableBorrowRate = uint128(newStableRate);
+        
+        emit ReserveDataUpdated(
+            asset,
+            newLiquidityRate,
+            newStableRate,
+            newVariableRate,
+            reserve.liquidityIndex,
+            reserve.variableBorrowIndex
+        );
+    }
+    
+    /**
+     * @notice Calculate flash loan premium
+     * @param amount The flash loan amount
+     * @param premiumBps Premium in basis points
+     * @return The premium amount
+     */
+    function calculateFlashLoanPremium(
+        uint256 amount,
+        uint256 premiumBps
+    ) internal pure returns (uint256) {
+        return amount.percentMul(premiumBps);
     }
 }

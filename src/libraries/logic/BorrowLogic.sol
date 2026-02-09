@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {DataTypes} from '../types/DataTypes.sol';
 import {Errors} from '../helpers/Errors.sol';
+import {WadRayMath} from '../math/WadRayMath.sol';
 import {IAToken} from '../../interfaces/IAToken.sol';
 import {IVariableDebtToken} from '../../interfaces/IVariableDebtToken.sol';
 import {IStableDebtToken} from '../../interfaces/IStableDebtToken.sol';
@@ -20,10 +21,11 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  */
 library BorrowLogic {
     using SafeERC20 for IERC20;
+    using WadRayMath for uint256;
     
     // ==================== EVENTS ====================
     
-    event Borrow(`
+    event Borrow(
         address indexed reserve,
         address user,
         address indexed onBehalfOf,
@@ -203,7 +205,7 @@ library BorrowLogic {
         
         // Update liquidity index (for aToken balance growth)
         if (liquidityRate > 0) {
-            uint256 linearInterest = calculateLinearInterest(liquidityRate, timeDelta);
+            uint256 linearInterest = WadRayMath.calculateLinearInterest(liquidityRate, timeDelta);
             reserve.liquidityIndex = uint128(
                 (uint256(reserve.liquidityIndex) * linearInterest) / 1e27
             );
@@ -211,7 +213,7 @@ library BorrowLogic {
         
         // Update variable borrow index (for debt growth)
         if (variableBorrowRate > 0) {
-            uint256 compoundedInterest = calculateCompoundedInterest(variableBorrowRate, timeDelta);
+            uint256 compoundedInterest = WadRayMath.calculateCompoundedInterest(variableBorrowRate, timeDelta);
             reserve.variableBorrowIndex = uint128(
                 (uint256(reserve.variableBorrowIndex) * compoundedInterest) / 1e27
             );
@@ -239,27 +241,16 @@ library BorrowLogic {
         uint256 totalVariableDebt = IVariableDebtToken(reserve.variableDebtTokenAddress).totalSupply();
         
         // Get average stable rate
-        (uint256 avgStableRate, ) = IStableDebtToken(reserve.stableDebtTokenAddress).getTotalSupplyAndAvgRate();
-        
+        // (uint256 avgStableRate, ) = IStableDebtToken(reserve.stableDebtTokenAddress).getTotalSupplyAndAvgRate();
+        uint256 totalDebt=totalStableDebt+totalVariableDebt+liquidityTaken-liquidityTaken;
         // Call interest rate strategy
-        IInterestRateStrategy.CalculateInterestRatesParams memory rateParams = 
-            IInterestRateStrategy.CalculateInterestRatesParams({
-                unbacked: 0,
-                liquidityAdded: liquidityAdded,
-                liquidityTaken: liquidityTaken,
-                totalStableDebt: totalStableDebt,
-                totalVariableDebt: totalVariableDebt,
-                averageStableBorrowRate: avgStableRate,
-                reserveFactor: 0, // Should come from reserve config
-                reserve: asset,
-                aToken: reserve.aTokenAddress
-            });
+
         
         (
             uint256 newLiquidityRate,
-            uint256 newStableBorrowRate,
-            uint256 newVariableBorrowRate
-        ) = IInterestRateStrategy(reserve.interestRateStrategyAddress).calculateInterestRates(rateParams);
+            uint256 newVariableBorrowRate,
+             uint256 newStableBorrowRate
+        ) = IInterestRateStrategy(reserve.interestRateStrategyAddress).calculateInterestRate((reserve.availableLiquidity+liquidityAdded),totalDebt);
         
         // Update reserve rates
         reserve.currentLiquidityRate = uint128(newLiquidityRate);
@@ -277,27 +268,4 @@ library BorrowLogic {
         );
     }
     
-    /**
-     * @notice Calculates linear interest (for liquidity index)
-     * @param rate The interest rate (in ray units, 1e27)
-     * @param timeDelta Time elapsed since last update
-     * @return The linear interest multiplier
-     */
-    function calculateLinearInterest(uint256 rate, uint256 timeDelta) internal pure returns (uint256) {
-        // linearInterest = 1 + (rate * timeDelta / secondsPerYear)
-        // In ray: 1e27 + (rate * timeDelta / 31536000)
-        return 1e27 + ((rate * timeDelta) / 365 days);
-    }
-    
-    /**
-     * @notice Calculates compound interest (for variable borrow index)
-     * @param rate The interest rate (in ray units, 1e27)
-     * @param timeDelta Time elapsed since last update
-     * @return The compound interest multiplier
-     */
-    function calculateCompoundedInterest(uint256 rate, uint256 timeDelta) internal pure returns (uint256) {
-        // For simplicity, using linear for now
-        // Production would use actual compound calculation
-        return calculateLinearInterest(rate, timeDelta);
-    }
 }

@@ -3,119 +3,357 @@ pragma solidity ^0.8.20;
 
 import {DataTypes} from '../types/DataTypes.sol';
 import {Errors} from '../helpers/Errors.sol';
+import {ReserveConfiguration} from '../configuration/ReserveConfiguration.sol';
+import {PercentageMath} from '../math/PercentageMath.sol';
+import {WadRayMath} from '../math/WadRayMath.sol';
+import {IAToken} from '../../interfaces/IAToken.sol';
+import {IStableDebtToken} from '../../interfaces/IStableDebtToken.sol';
+import {IVariableDebtToken} from '../../interfaces/IVariableDebtToken.sol';
+import {IPriceOracle} from '../../interfaces/IPriceOracle.sol';
+import {IInterestRateStrategy} from '../../interfaces/IInterestRateStrategy.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
 /**
  * @title LiquidationLogic
- * @notice Handles ALL liquidation-related operations
- * - Validation
- * - Execution
- * - Collateral seizure
- * - Bonus calculation
+ * @notice Handles liquidation of undercollateralized positions
+ * @dev When a user's health factor drops below 1.0, liquidators can repay
+ * part of their debt in exchange for collateral + bonus
  * 
- * TODO: Implement liquidation validation and execution
+ * Liquidation Process:
+ * 1. Check user is liquidatable (HF < 1.0)
+ * 2. Calculate max debt to cover (up to 50% close factor)
+ * 3. Calculate collateral to seize (debt value + liquidation bonus)
+ * 4. Transfer debt repayment from liquidator
+ * 5. Burn user's debt tokens
+ * 6. Transfer/burn collateral to liquidator
+ * 7. Update interest rates
  */
 library LiquidationLogic {
+    using ReserveConfiguration for DataTypes.ReserveConfigurationMap;
+    using PercentageMath for uint256;
+    using WadRayMath for uint256;
+    using SafeERC20 for IERC20;
+    
+    // ============ Constants ============
+    
+    uint256 public constant CLOSE_FACTOR_HF_THRESHOLD = 0.95e18;
+    uint256 public constant DEFAULT_LIQUIDATION_CLOSE_FACTOR = 5000; // 50%
+    uint256 public constant MAX_LIQUIDATION_CLOSE_FACTOR = 10000; // 100%
+    
+    // ============ Events ============
+    
+    event LiquidationCall(
+        address indexed collateralAsset,
+        address indexed debtAsset,
+        address indexed user,
+        uint256 debtToCover,
+        uint256 liquidatedCollateralAmount,
+        address liquidator,
+        bool receiveAToken
+    );
+    
+    event ReserveDataUpdated(
+        address indexed reserve,
+        uint256 liquidityRate,
+        uint256 stableBorrowRate,
+        uint256 variableBorrowRate,
+        uint256 liquidityIndex,
+        uint256 variableBorrowIndex
+    );
+    
+    // ============ Structs ============
+    
+    struct LiquidationCallLocalVars {
+        uint256 userCollateralBalance;
+        uint256 userStableDebt;
+        uint256 userVariableDebt;
+        uint256 userTotalDebt;
+        uint256 maxDebtToCover;
+        uint256 actualDebtToLiquidate;
+        uint256 collateralPrice;
+        uint256 debtPrice;
+        uint256 collateralDecimals;
+        uint256 debtDecimals;
+        uint256 collateralToSeize;
+        uint256 liquidationBonus;
+        uint256 liquidationProtocolFee;
+        uint256 protocolFeeAmount;
+        uint256 healthFactor;
+        IAToken collateralAToken;
+        IVariableDebtToken variableDebtToken;
+        IStableDebtToken stableDebtToken;
+    }
+    
+    // ============ Validation ============
     
     /**
-     * Validate liquidation call
-     * 
-     * TODO: Implement validation checks:
-     * 1. Check reserves active:
-     *    - require(collateralReserve.isActive, Errors.RESERVE_INACTIVE)
-     *    - require(debtReserve.isActive, Errors.RESERVE_INACTIVE)
-     *    - require(!collateralReserve.isPaused, Errors.RESERVE_PAUSED)
-     *    - require(!debtReserve.isPaused, Errors.RESERVE_PAUSED)
-     * 
-     * 2. Calculate and check health factor:
-     *    - uint256 healthFactor = calculateHealthFactor(user)
-     *    - require(healthFactor < 1e18, Errors.HEALTH_FACTOR_NOT_BELOW_THRESHOLD)
-     *    - Can only liquidate unhealthy positions!
-     * 
-     * 3. Check user has debt in specified asset:
-     *    - uint256 userDebt = IVariableDebtToken(debtReserve.variableDebtTokenAddress).balanceOf(user)
-     *                       + IStableDebtToken(debtReserve.stableDebtTokenAddress).balanceOf(user)
-     *    - require(userDebt > 0, Errors.SPECIFIED_CURRENCY_NOT_BORROWED_BY_USER)
-     * 
-     * 4. Check liquidation amount:
-     *    - require(debtToCover > 0, Errors.INVALID_AMOUNT)
-     *    - uint256 maxLiquidatableDebt = userDebt / 2 (50% close factor)
-     *    - If debtToCover > maxLiquidatableDebt: debtToCover = maxLiquidatableDebt
-     * 
+     * @notice Validate liquidation call
      * @param collateralReserve The collateral reserve
      * @param debtReserve The debt reserve
-     * @param user The user being liquidated
-     * @param debtToCover Amount of debt to cover
-     * @param healthFactor User's current health factor
+     * @param userHealthFactor User's health factor
+     * @param userStableDebt User's stable debt
+     * @param userVariableDebt User's variable debt
      */
     function validateLiquidationCall(
         DataTypes.ReserveData storage collateralReserve,
         DataTypes.ReserveData storage debtReserve,
-        address user,
-        uint256 debtToCover,
-        uint256 healthFactor
+        uint256 userHealthFactor,
+        uint256 userStableDebt,
+        uint256 userVariableDebt
     ) internal view {
-        // TODO: Implement validation
+        (bool collateralActive, , , , bool collateralPaused) = 
+            collateralReserve.configuration.getFlags();
+        (bool debtActive, , , , bool debtPaused) = 
+            debtReserve.configuration.getFlags();
+        
+        require(collateralActive, Errors.RESERVE_INACTIVE);
+        require(debtActive, Errors.RESERVE_INACTIVE);
+        require(!collateralPaused, Errors.RESERVE_PAUSED);
+        require(!debtPaused, Errors.RESERVE_PAUSED);
+        
+        require(userHealthFactor < 1e18, Errors.HEALTH_FACTOR_NOT_BELOW_THRESHOLD);
+        require(userStableDebt > 0 || userVariableDebt > 0, Errors.SPECIFIED_CURRENCY_NOT_BORROWED_BY_USER);
+    }
+    
+    // ============ Main Functions ============
+    
+    /**
+     * @notice Execute liquidation call
+     * @param collateralReserve The collateral reserve data
+     * @param debtReserve The debt reserve data
+     * @param params The liquidation parameters
+     * @param oracle The price oracle address
+     * @return actualDebtToLiquidate Amount of debt actually liquidated
+     * @return actualCollateralToSeize Amount of collateral seized
+     */
+    function executeLiquidationCall(
+        DataTypes.ReserveData storage collateralReserve,
+        DataTypes.ReserveData storage debtReserve,
+        DataTypes.ExecuteLiquidationCallParams memory params,
+        address oracle
+    ) internal returns (uint256, uint256) {
+        LiquidationCallLocalVars memory vars;
+        
+        // Get user's collateral and debt balances
+        vars.collateralAToken = IAToken(collateralReserve.aTokenAddress);
+        vars.variableDebtToken = IVariableDebtToken(debtReserve.variableDebtTokenAddress);
+        vars.stableDebtToken = IStableDebtToken(debtReserve.stableDebtTokenAddress);
+        
+        vars.userCollateralBalance = vars.collateralAToken.balanceOf(params.user);
+        vars.userVariableDebt = vars.variableDebtToken.balanceOf(params.user);
+        vars.userStableDebt = vars.stableDebtToken.balanceOf(params.user);
+        vars.userTotalDebt = vars.userVariableDebt + vars.userStableDebt;
+        
+        require(vars.userCollateralBalance > 0, Errors.COLLATERAL_CANNOT_BE_LIQUIDATED);
+        require(vars.userTotalDebt > 0, Errors.SPECIFIED_CURRENCY_NOT_BORROWED_BY_USER);
+        
+        // Get prices from oracle
+        vars.collateralPrice = IPriceOracle(oracle).getAssetPrice(params.collateralAsset);
+        vars.debtPrice = IPriceOracle(oracle).getAssetPrice(params.debtAsset);
+        
+        require(vars.collateralPrice > 0 && vars.debtPrice > 0, Errors.ORACLE_ERROR);
+        
+        // Get decimals and liquidation parameters
+        (
+            ,
+            ,
+            vars.liquidationBonus,
+            vars.collateralDecimals,
+            
+        ) = collateralReserve.configuration.getParams();
+        
+        vars.debtDecimals = debtReserve.configuration.getDecimals();
+        vars.liquidationProtocolFee = collateralReserve.configuration.getLiquidationProtocolFee();
+        
+        // Calculate max debt to cover based on close factor
+        vars.maxDebtToCover = _calculateMaxDebtToCover(vars.userTotalDebt, vars.healthFactor);
+        
+        // Actual debt to liquidate is min of requested and max allowed
+        vars.actualDebtToLiquidate = params.debtToCover > vars.maxDebtToCover
+            ? vars.maxDebtToCover
+            : params.debtToCover;
+        
+        // Calculate collateral to seize
+        vars.collateralToSeize = _calculateCollateralToSeize(
+            vars.collateralPrice,
+            vars.debtPrice,
+            vars.actualDebtToLiquidate,
+            vars.collateralDecimals,
+            vars.debtDecimals,
+            vars.liquidationBonus
+        );
+        
+        // If not enough collateral, reduce debt to cover
+        if (vars.collateralToSeize > vars.userCollateralBalance) {
+            vars.collateralToSeize = vars.userCollateralBalance;
+            vars.actualDebtToLiquidate = _calculateDebtFromCollateral(
+                vars.collateralPrice,
+                vars.debtPrice,
+                vars.collateralToSeize,
+                vars.collateralDecimals,
+                vars.debtDecimals,
+                vars.liquidationBonus
+            );
+        }
+        
+        // Calculate protocol fee
+        if (vars.liquidationProtocolFee > 0) {
+            vars.protocolFeeAmount = vars.collateralToSeize.percentMul(vars.liquidationProtocolFee);
+            vars.collateralToSeize -= vars.protocolFeeAmount;
+        }
+        
+        // Transfer debt from liquidator to aToken (repaying the debt)
+        IERC20(params.debtAsset).safeTransferFrom(
+            msg.sender,
+            debtReserve.aTokenAddress,
+            vars.actualDebtToLiquidate
+        );
+        
+        // Burn debt tokens (variable first, then stable)
+        _burnDebtTokens(
+            vars.variableDebtToken,
+            vars.stableDebtToken,
+            params.user,
+            vars.actualDebtToLiquidate,
+            vars.userVariableDebt,
+            debtReserve.variableBorrowIndex
+        );
+        
+        // Update debt reserve liquidity
+        debtReserve.availableLiquidity += vars.actualDebtToLiquidate;
+        
+        // Transfer or burn collateral
+        if (params.receiveAToken) {
+            // Transfer aTokens to liquidator
+            vars.collateralAToken.transferFrom(params.user, msg.sender, vars.collateralToSeize);
+        } else {
+            // Burn aTokens and transfer underlying to liquidator
+            vars.collateralAToken.burn(
+                params.user,
+                msg.sender,
+                vars.collateralToSeize,
+                collateralReserve.liquidityIndex
+            );
+            collateralReserve.availableLiquidity -= vars.collateralToSeize;
+        }
+        
+        // Update interest rates for both reserves
+        _updateInterestRates(collateralReserve, params.collateralAsset);
+        _updateInterestRates(debtReserve, params.debtAsset);
+        
+        emit LiquidationCall(
+            params.collateralAsset,
+            params.debtAsset,
+            params.user,
+            vars.actualDebtToLiquidate,
+            vars.collateralToSeize,
+            msg.sender,
+            params.receiveAToken
+        );
+        
+        return (vars.actualDebtToLiquidate, vars.collateralToSeize);
+    }
+    
+    // ============ Internal Functions ============
+    
+    /**
+     * @notice Calculate max debt that can be covered
+     */
+    function _calculateMaxDebtToCover(
+        uint256 userTotalDebt,
+        uint256 healthFactor
+    ) internal pure returns (uint256) {
+        if (healthFactor < CLOSE_FACTOR_HF_THRESHOLD) {
+            return userTotalDebt;
+        }
+        return userTotalDebt.percentMul(DEFAULT_LIQUIDATION_CLOSE_FACTOR);
     }
     
     /**
-     * Execute liquidation call
-     * 
-     * TODO: Implement liquidation execution:
-     * 1. Update both reserve states:
-     *    - updateState(collateralReserve)
-     *    - updateState(debtReserve)
-     * 
-     * 2. Calculate actual debt to cover:
-     *    - uint256 userDebt = getTotalDebt(debtReserve, user)
-     *    - uint256 maxLiquidatable = userDebt / 2 (close factor)
-     *    - uint256 actualDebtToCover = min(debtToCover, maxLiquidatable)
-     * 
-     * 3. Calculate collateral to seize:
-     *    - Get asset prices from oracle:
-     *        uint256 debtPrice = IPriceOracle(oracle).getAssetPrice(debtAsset)
-     *        uint256 collateralPrice = IPriceOracle(oracle).getAssetPrice(collateralAsset)
-     *    - Calculate USD value of debt:
-     *        uint256 debtValueUSD = (actualDebtToCover * debtPrice) / 1e18
-     *    - Get liquidation bonus from collateral reserve config (e.g., 10500 = 105% = 5% bonus)
-     *    - Calculate collateral amount:
-     *        uint256 collateralAmount = (debtValueUSD * liquidationBonus * 1e18) / (collateralPrice * 10000)
-     * 
-     * 4. Check user has enough collateral:
-     *    - uint256 userCollateral = IAToken(collateralReserve.aTokenAddress).balanceOf(user)
-     *    - if (collateralAmount > userCollateral):
-     *        // Partial liquidation - seize all available
-     *        collateralAmount = userCollateral
-     *        // Recalculate debt to cover
-     *        actualDebtToCover = (collateralAmount * collateralPrice * 10000) / (debtPrice * liquidationBonus)
-     * 
-     * 5. Repay debt on behalf of user:
-     *    - Transfer debt asset from liquidator:
-     *        IERC20(debtAsset).safeTransferFrom(msg.sender, debtReserve.aTokenAddress, actualDebtToCover)
-     *    - Burn user's debt tokens (try variable first, then stable)
-     * 
-     * 6. Transfer collateral to liquidator:
-     *    - if (receiveAToken):
-     *        // Transfer aTokens (liquidator keeps earning interest)
-     *        IAToken(collateralReserve.aTokenAddress).transferFrom(user, msg.sender, collateralAmount)
-     *    - else:
-     *        // Burn aTokens and transfer underlying
-     *        IAToken(collateralReserve.aTokenAddress).burn(user, collateralAmount)
-     *        IERC20(collateralAsset).safeTransfer(msg.sender, collateralAmount)
-     * 
-     * 7. Update liquidity for both reserves
-     * 
-     * 8. Update interest rates for both reserves
-     * 
-     * 9. Verify health factor improved (or user fully liquidated)
-     * 
-     * 10. Emit event:
-     *     - emit LiquidationCall(collateralAsset, debtAsset, user, actualDebtToCover, collateralAmount, msg.sender)
-     * 
-     * @param params Liquidation parameters
+     * @notice Calculate collateral to seize for given debt
      */
-    function executeLiquidationCall(
-        DataTypes.ExecuteLiquidationCallParams memory params
+    function _calculateCollateralToSeize(
+        uint256 collateralPrice,
+        uint256 debtPrice,
+        uint256 debtAmount,
+        uint256 collateralDecimals,
+        uint256 debtDecimals,
+        uint256 liquidationBonus
+    ) internal pure returns (uint256) {
+        uint256 debtValueInBase = (debtAmount * debtPrice) / (10 ** debtDecimals);
+        uint256 collateralValueInBase = debtValueInBase.percentMul(liquidationBonus);
+        return (collateralValueInBase * (10 ** collateralDecimals)) / collateralPrice;
+    }
+    
+    /**
+     * @notice Calculate debt amount for given collateral
+     */
+    function _calculateDebtFromCollateral(
+        uint256 collateralPrice,
+        uint256 debtPrice,
+        uint256 collateralAmount,
+        uint256 collateralDecimals,
+        uint256 debtDecimals,
+        uint256 liquidationBonus
+    ) internal pure returns (uint256) {
+        uint256 collateralValueInBase = (collateralAmount * collateralPrice) / (10 ** collateralDecimals);
+        uint256 debtValueInBase = collateralValueInBase.percentDiv(liquidationBonus);
+        return (debtValueInBase * (10 ** debtDecimals)) / debtPrice;
+    }
+    
+    /**
+     * @notice Burn debt tokens for liquidation
+     */
+    function _burnDebtTokens(
+        IVariableDebtToken variableDebtToken,
+        IStableDebtToken stableDebtToken,
+        address user,
+        uint256 amount,
+        uint256 variableDebt,
+        uint256 variableBorrowIndex
     ) internal {
-        // TODO: Implement execution
+        if (variableDebt >= amount) {
+            variableDebtToken.burn(user, amount, variableBorrowIndex);
+        } else {
+            if (variableDebt > 0) {
+                variableDebtToken.burn(user, variableDebt, variableBorrowIndex);
+            }
+            stableDebtToken.burn(user, amount - variableDebt);
+        }
+    }
+    
+    /**
+     * @notice Update interest rates after liquidation
+     */
+    function _updateInterestRates(
+        DataTypes.ReserveData storage reserve,
+        address asset
+    ) internal {
+        uint256 totalStableDebt = IStableDebtToken(reserve.stableDebtTokenAddress).totalSupply();
+        uint256 totalVariableDebt = IVariableDebtToken(reserve.variableDebtTokenAddress).totalSupply();
+        uint256 totalDebt = totalStableDebt + totalVariableDebt;
+        
+        (
+            uint256 newLiquidityRate,
+            uint256 newVariableRate,
+            uint256 newStableRate
+        ) = IInterestRateStrategy(reserve.interestRateStrategyAddress).calculateInterestRate(
+            reserve.availableLiquidity,
+            totalDebt
+        );
+        
+        reserve.currentLiquidityRate = uint128(newLiquidityRate);
+        reserve.currentVariableBorrowRate = uint128(newVariableRate);
+        reserve.currentStableBorrowRate = uint128(newStableRate);
+        
+        emit ReserveDataUpdated(
+            asset,
+            newLiquidityRate,
+            newStableRate,
+            newVariableRate,
+            reserve.liquidityIndex,
+            reserve.variableBorrowIndex
+        );
     }
 }

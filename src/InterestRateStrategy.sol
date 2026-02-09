@@ -17,15 +17,9 @@ pragma solidity ^0.8.20;
  * If utilization > optimalRate: Rate = baseRate + slope + (utilizationRate - optimal) * slopeHigh
  */
 
-interface IInterestRateStrategy {
-    function calculateInterestRate(
-        uint256 totalLiquidity,
-        uint256 totalBorrow,
-        uint256 totalReserves
-    ) external view returns (uint256 variableRate, uint256 stableRate);
-}
+import {IInterestRateStrategy} from './interfaces/IInterestRateStrategy.sol';  
 
-contract DefaultInterestRateStrategy is IInterestRateStrategy {
+contract DefaultInterestRateStrategy is IInterestRateStrategy {  
     
     uint256 public constant OPTIMAL_UTILIZATION = 80e2; // 80%
     uint256 public constant BASE_RATE = 0;              // 0%
@@ -37,30 +31,36 @@ contract DefaultInterestRateStrategy is IInterestRateStrategy {
      * POINTER: Below optimal utilization, rate increases slowly
      *          Above optimal, rate increases steeply to discourage over-borrowing
      */
+
     function calculateInterestRate(
-        uint256 totalLiquidity,
-        uint256 totalBorrow,
-        uint256 totalReserves
-    ) external pure override returns (uint256 variableRate, uint256 stableRate) {
-        
-        if (totalLiquidity == 0) {
-            return (0, 0);
-        }
-        
-        uint256 utilizationRate = (totalBorrow * 100e2) / (totalLiquidity + totalBorrow);
-        
-        if (utilizationRate <= OPTIMAL_UTILIZATION) {
-            // Below optimal: gradual increase
-            variableRate = BASE_RATE + (utilizationRate * SLOPE1) / 100e2;
-        } else {
-            // Above optimal: steep increase
-            uint256 excessUtilization = utilizationRate - OPTIMAL_UTILIZATION;
-            variableRate = BASE_RATE + 
-                          (OPTIMAL_UTILIZATION * SLOPE1) / 100e2 + 
-                          (excessUtilization * SLOPE2) / 100e2;
-        }
-        
-        // Stable rate slightly higher than variable
-        stableRate = (variableRate * 125) / 100; // +25% buffer
+    uint256 totalLiquidity,
+    uint256 totalBorrow
+) external override pure returns (
+    uint256 liquidityRate,
+    uint256 variableRate, 
+    uint256 stableRate
+) {
+    if (totalLiquidity == 0) {
+        return (0, 0, 0);
     }
+    
+    uint256 utilizationRate = (totalBorrow * 100e2) / (totalLiquidity + totalBorrow);
+    
+    // Calculate borrow rates
+    if (utilizationRate <= OPTIMAL_UTILIZATION) {
+        variableRate = BASE_RATE + (utilizationRate * SLOPE1) / 100e2;
+    } else {
+        uint256 excessUtilization = utilizationRate - OPTIMAL_UTILIZATION;
+        variableRate = BASE_RATE + 
+                      (OPTIMAL_UTILIZATION * SLOPE1) / 100e2 + 
+                      (excessUtilization * SLOPE2) / 100e2;
+    }
+    
+    stableRate = (variableRate * 125) / 100;
+    
+    // Calculate liquidity rate (what depositors earn)
+    // Assume 50/50 stable/variable split for simplicity, no reserve factor
+    uint256 avgBorrowRate = (variableRate + stableRate) / 2;
+    liquidityRate = (avgBorrowRate * utilizationRate) / 100e2;
+}
 }

@@ -103,4 +103,14 @@ library Errors {
     // ==================== ORACLE ERRORS ====================
     string public constant INVALID_PRICE_SOURCE = '67'; // Invalid price source
     string public constant PRICE_ORACLE_NOT_SET = '68'; // Price oracle not set
+    string public constant ORACLE_ERROR = '70'; // Oracle returned invalid price
+    
+    // ==================== CONFIGURATION ERRORS ====================
+    string public constant INVALID_RESERVE_INDEX = '69'; // Reserve index exceeds maximum
+    string public constant ZERO_ADDRESS_NOT_VALID = '71'; // Address cannot be zero
+    string public constant NOT_ENOUGH_LIQUIDITY = '72'; // Not enough liquidity in reserve
+    string public constant FLASHLOAN_DISABLED = '73'; // Flash loans are disabled for this reserve
+    string public constant HEALTH_FACTOR_NOT_IMPROVED = '74'; // Health factor did not improve after action
+    string public constant UNDERLYING_BALANCE_ZERO = '75'; // Underlying balance is zero
+    string public constant INVALID_FLASHLOAN_EXECUTOR_RETURN = '76'; // Flash loan executor returned invalid value
 }

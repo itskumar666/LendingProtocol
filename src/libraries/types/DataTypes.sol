@@ -30,6 +30,9 @@ library DataTypes {
         uint128 currentStableBorrowRate;
         uint40 lastUpdateTimestamp;
         
+        // Configuration (packed)
+        ReserveConfigurationMap configuration;
+        
         // Configuration
         uint16 id; // Reserve ID for bitmap
         
@@ -91,12 +94,14 @@ library DataTypes {
         uint256 amount;
         address onBehalfOf;
         uint16 referralCode;
+        uint256 supplyCap; 
     }
     
     /**
      * Execution parameters for withdraw
      */
     struct ExecuteWithdrawParams {
+        address user;
         address asset;
         uint256 amount;
         address to;
@@ -151,6 +156,30 @@ library DataTypes {
         address user;
         address oracle;
         uint8 userEModeCategory;
+    }
+    
+    /**
+     * Execution parameters for flash loan
+     */
+    struct ExecuteFlashLoanParams {
+        address receiverAddress;
+        address[] assets;
+        uint256[] amounts;
+        uint256[] interestRateModes;
+        address onBehalfOf;
+        bytes params;
+        uint16 referralCode;
+    }
+    
+    /**
+     * Flash loan simple (single asset)
+     */
+    struct ExecuteFlashLoanSimpleParams {
+        address receiverAddress;
+        address asset;
+        uint256 amount;
+        bytes params;
+        uint16 referralCode;
     }
     
     /**

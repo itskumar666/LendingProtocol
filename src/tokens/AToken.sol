@@ -153,6 +153,7 @@ contract AToken is ERC20, AccessControl {
         scaledBalances[user] -= scaledAmount;
         scaledTotalSupply -= scaledAmount;
         
+        
         // Emit Transfer event (NOT calling _burn!)
         // We manage balances ourselves via scaledBalances
         // Emit the ACTUAL amount so users see correct balance change

@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
+
+import "../libraries/types/DataTypes.sol";
 
 /**
  * @title ILendingPool
@@ -7,61 +9,6 @@ pragma solidity ^0.8.20;
  * @dev Main entry point for protocol interactions
  */
 interface ILendingPool {
-    
-    // ==================== EVENTS ====================
-    
-    event Deposit(
-        address indexed reserve,
-        address user,
-        address indexed onBehalfOf,
-        uint256 amount,
-        uint16 indexed referralCode
-    );
-    
-    event Withdraw(
-        address indexed reserve,
-        address indexed user,
-        address indexed to,
-        uint256 amount
-    );
-    
-    event Borrow(
-        address indexed reserve,
-        address user,
-        address indexed onBehalfOf,
-        uint256 amount,
-        uint8 interestRateMode,
-        uint256 borrowRate,
-        uint16 indexed referralCode
-    );
-    
-    event Repay(
-        address indexed reserve,
-        address indexed user,
-        address indexed repayer,
-        uint256 amount,
-        bool useATokens
-    );
-    
-    event LiquidationCall(
-        address indexed collateralAsset,
-        address indexed debtAsset,
-        address indexed user,
-        uint256 debtToCover,
-        uint256 liquidatedCollateralAmount,
-        address liquidator,
-        bool receiveAToken
-    );
-    
-    event ReserveUsedAsCollateralEnabled(
-        address indexed reserve,
-        address indexed user
-    );
-    
-    event ReserveUsedAsCollateralDisabled(
-        address indexed reserve,
-        address indexed user
-    );
     
     // ==================== CORE FUNCTIONS ====================
     
@@ -103,7 +50,7 @@ interface ILendingPool {
     function borrow(
         address asset,
         uint256 amount,
-        uint8 interestRateMode,
+        uint256 interestRateMode,
         uint16 referralCode,
         address onBehalfOf
     ) external;
@@ -119,7 +66,7 @@ interface ILendingPool {
     function repay(
         address asset,
         uint256 amount,
-        uint8 interestRateMode,
+        uint256 interestRateMode,
         address onBehalfOf
     ) external returns (uint256);
     
@@ -137,6 +84,36 @@ interface ILendingPool {
         address user,
         uint256 debtToCover,
         bool receiveAToken
+    ) external;
+
+    /**
+     * @notice Allows anyone to flash borrow assets from the pool
+     * @param receiverAddress The address of the contract receiving the funds
+     * @param assets The addresses of the assets being flash-borrowed
+     * @param amounts The amounts of the assets being flash-borrowed
+     * @param interestRateModes The interest rate modes for incurring debt (0 = no debt, 1 = stable, 2 = variable)
+     * @param onBehalfOf The address that will receive the debt if mode != 0
+     * @param params Variadic packed params to pass to the receiver
+     * @param referralCode Code for potential rewards
+     */
+    function flashLoan(
+        address receiverAddress,
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata interestRateModes,
+        address onBehalfOf,
+        bytes calldata params,
+        uint16 referralCode
+    ) external;
+
+    /**
+     * @notice Allows depositors to enable/disable a specific deposited asset as collateral
+     * @param asset The address of the underlying asset
+     * @param useAsCollateral True if the user wants to use the asset as collateral
+     */
+    function setUserUseReserveAsCollateral(
+        address asset,
+        bool useAsCollateral
     ) external;
     
     // ==================== VIEW FUNCTIONS ====================
@@ -162,4 +139,45 @@ interface ILendingPool {
             uint256 ltv,
             uint256 healthFactor
         );
+
+    /**
+     * @notice Returns the state and configuration of a reserve
+     * @param asset The address of the underlying asset
+     * @return The reserve data
+     */
+    function getReserveData(address asset) external view returns (DataTypes.ReserveData memory);
+
+    /**
+     * @notice Returns the configuration of a user's collateral and borrowing
+     * @param user The address of the user
+     * @return The user configuration bitmap
+     */
+    function getUserConfiguration(address user) external view returns (DataTypes.UserConfigurationMap memory);
+
+    /**
+     * @notice Returns the configuration of a reserve
+     * @param asset The address of the underlying asset
+     * @return The reserve configuration
+     */
+    function getConfiguration(address asset) external view returns (DataTypes.ReserveConfigurationMap memory);
+
+    /**
+     * @notice Returns the normalized income for a reserve
+     * @param asset The address of the underlying asset
+     * @return The reserve normalized income
+     */
+    function getReserveNormalizedIncome(address asset) external view returns (uint256);
+
+    /**
+     * @notice Returns the normalized debt for a reserve
+     * @param asset The address of the underlying asset
+     * @return The reserve normalized debt
+     */
+    function getReserveNormalizedVariableDebt(address asset) external view returns (uint256);
+
+    /**
+     * @notice Returns the list of all reserve addresses
+     * @return The list of reserves
+     */
+    function getReservesList() external view returns (address[] memory);
 }
